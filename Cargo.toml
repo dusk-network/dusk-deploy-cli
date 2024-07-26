@@ -1,2 +1,3 @@
 [workspace]
-members = ["dusk-deploy-cli"]
+members = ["dusk-deploy-cli", "wallet-accessor"]
+workspace.resolver = "2"
