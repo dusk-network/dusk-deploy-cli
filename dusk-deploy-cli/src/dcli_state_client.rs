@@ -7,9 +7,13 @@
 use crate::rusk_http_client::RuskHttpClient;
 use crate::Error;
 use execution_core::{BlsScalar, Note, PublicKey, ViewKey};
-use purse::StateClient;
+use poseidon_merkle::Opening as PoseidonOpening;
 use std::sync::Mutex;
 use wallet::StateClient;
+
+const TRANSFER_CONTRACT: &str = "0100000000000000000000000000000000000000000000000000000000000000"; // todo
+
+pub const POSEIDON_TREE_DEPTH: usize = 17; // todo
 
 pub struct DCliStateClient {
     pub inner: Mutex<InnerState>,

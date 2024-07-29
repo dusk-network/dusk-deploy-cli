@@ -12,7 +12,7 @@ use rusk_prover::{LocalProver, Prover, UnprovenTransaction};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex, RwLock};
-use wallet::{Store, Wallet};
+use wallet::{ProverClient, StateClient, Store, Wallet};
 
 #[derive(Debug, Clone)]
 pub struct DcliStore;
@@ -45,7 +45,6 @@ impl wallet::ProverClient for DcliProverClient {
     ) -> Result<Transaction, Self::Error> {
         let utx_bytes = &utx.to_var_bytes()[..];
         let proof = self.prover.prove_execute(utx_bytes)?;
-        info!("UTX: {}", hex::encode(utx_bytes));
         let proof = Proof::from_slice(&proof).map_err(Error::Serialization)?;
         let tx = utx.clone().gen_transaction(proof);
 
@@ -55,15 +54,20 @@ impl wallet::ProverClient for DcliProverClient {
     }
 }
 
-pub struct WalletBuilder;
+pub struct WalletBuilder<S, SC, PC>;
 
-impl WalletBuilder {
-    pub fn build() -> Result<Wallet<DcliStore, DcliProverClient, DcliProverClient>, Error> {
+impl<S, SC, PC> WalletBuilder<S, SC, PC>
+where
+    S: Store,
+    SC: StateClient,
+    PC: ProverClient,
+{
+    pub fn build(url: impl AsRef<str>) -> Result<Wallet<S, SC, PC>, Error> {
         // let cache = Arc::new(RwLock::new(HashMap::new()));
 
         let wallet = wallet::Wallet::new(
             DcliStore,
-            DCliStateClient::new(RuskHttpClient::new("url".to_string())), // todo: pass url here
+            DCliStateClient::new(RuskHttpClient::new(url.to_string())),
             DcliProverClient::default(),
         );
         Ok(wallet)

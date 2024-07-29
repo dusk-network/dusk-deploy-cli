@@ -9,18 +9,17 @@ mod dcli_state_client;
 mod deployer;
 mod error;
 mod rusk_http_client;
-mod tx_builder;
 mod wallet_builder;
 
 use crate::args::Args;
 use crate::error::Error;
 use clap::Parser;
 use std::fs;
+use std::fs::File;
+use std::io::Read;
 use toml_base_config::BaseConfig;
 
-use dusk_wallet::{Wallet, WalletPath};
-use wallet_accessor::Password::{Pwd, PwdHash};
-use wallet_accessor::{BlockchainAccessConfig, WalletAccessor};
+use crate::deployer::Deployer;
 
 #[tokio::main]
 #[allow(non_snake_case)]
@@ -31,28 +30,43 @@ async fn main() -> Result<(), Error> {
     let wallet_path = cli.wallet_path.as_path();
     let password = cli.wallet_pass;
     let pwd_hash = cli.pwd_hash;
-    let _gas_limit = cli.gas_limit;
-    let _gas_price = cli.gas_price;
-    let _contract_path = cli.contract_path.as_path();
-    let _owner = cli.owner;
-    let _nonce = cli.nonce;
+    let gas_limit = cli.gas_limit;
+    let gas_price = cli.gas_price;
+    let contract_path = cli.contract_path.as_path();
+    let owner = cli.owner;
+    let nonce = cli.nonce;
 
-    let wallet_path = WalletPath::from(wallet_path.join("wallet.dat"));
-    let _ = fs::metadata(config_path)
-        .map_err(|_| Error::NotFound(config_path.to_string_lossy().into_owned().into()))?;
-    let _blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
-    let psw = if pwd_hash.is_empty() {
-        Pwd(password)
-    } else {
-        PwdHash(pwd_hash)
-    };
+    // let wallet_path = WalletPath::from(wallet_path.join("wallet.dat"));
+    // let _ = fs::metadata(config_path)
+    //     .map_err(|_| Error::NotFound(config_path.to_string_lossy().into_owned().into()))?;
+    let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
+    // let psw = if pwd_hash.is_empty() {
+    //     Pwd(password)
+    // } else {
+    //     PwdHash(pwd_hash)
+    // };
 
-    let wallet_accessor = WalletAccessor::create(wallet_path.clone(), psw.clone())?;
-    let wallet = Wallet::from_file(wallet_accessor)?;
+    let mut bytecode_file = File::open(contract_path)?;
+    let mut bytecode = Vec::new();
+    bytecode_file.read_to_end(&mut bytecode)?;
 
-    let (_psk, _ssk) = wallet.spending_keys(wallet.default_address())?;
+    // let wallet_accessor = WalletAccessor::create(wallet_path.clone(), psw.clone())?;
+    // let wallet = Wallet::from_file(wallet_accessor)?;
 
-    println!("hello dusk-deploy-cli");
+    // let (_psk, _ssk) = wallet.spending_keys(wallet.default_address())?;
+
+    let result = Deployer::deploy(
+        rusk_http_client_url,
+        bytecode.as_ref(),
+        owner,
+        constructor_args,
+        nonce,
+        wallet_index,
+        gas_limit,
+        gas_price,
+    );
+
+    println!("deployment result = {:?}", result);
 
     Ok(())
 }

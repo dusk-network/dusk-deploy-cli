@@ -8,16 +8,13 @@ use crate::{BalanceInfo, ProverClient, StateClient, Store};
 
 use core::convert::Infallible;
 
-use alloc::string::{FromUtf8Error, String};
+use alloc::string::FromUtf8Error;
 use alloc::vec::Vec;
 
 use dusk_bytes::Error as BytesError;
 use execution_core::{
-    stake::{Stake, StakeData, Withdraw as StakeWithdraw},
-    transfer::{
-        AccountData, ContractCall, ContractDeploy, ContractExec, Fee, MoonlightPayload,
-        PhoenixPayload, Transaction, Withdraw, WithdrawReceiver, WithdrawReplayToken,
-    },
+    stake::StakeData,
+    transfer::{ContractCall, ContractDeploy, ContractExec, Fee, PhoenixPayload, Transaction},
     BlsPublicKey, BlsScalar, JubJubScalar, Note, PhoenixError, PublicKey, SchnorrSecretKey,
     SecretKey, TxSkeleton, ViewKey, OUTPUT_NOTES,
 };
@@ -30,11 +27,6 @@ use rkyv::validation::validators::CheckDeserializeError;
 use rusk_prover::{UnprovenTransaction, UnprovenTransactionInput};
 
 const MAX_INPUT_NOTES: usize = 4;
-const SCRATCH_SIZE: usize = 2048;
-
-const TX_STAKE: &str = "stake";
-const TX_UNSTAKE: &str = "unstake";
-const TX_WITHDRAW: &str = "withdraw";
 
 type SerializerError =
     CompositeSerializerError<Infallible, AllocScratchError, SharedSerializeMapError>;
@@ -410,274 +402,6 @@ where
         )
     }
 
-    /// Stakes an amount of Dusk using Phoenix notes.
-    #[allow(clippy::too_many_arguments)]
-    pub fn phoenix_stake<Rng: RngCore + CryptoRng>(
-        &self,
-        rng: &mut Rng,
-        sender_index: u64,
-        staker_index: u64,
-        value: u64,
-        gas_limit: u64,
-        gas_price: u64,
-    ) -> Result<Transaction, Error<S, SC, PC>> {
-        let sender_sk = self
-            .store
-            .fetch_secret_key(sender_index)
-            .map_err(Error::from_store_err)?;
-        let receiver_pk = PublicKey::from(&sender_sk);
-
-        let stake_sk = self
-            .store
-            .fetch_account_secret_key(staker_index)
-            .map_err(Error::from_store_err)?;
-        let stake_pk = BlsPublicKey::from(&stake_sk);
-
-        let stake = self
-            .state
-            .fetch_stake(&stake_pk)
-            .map_err(Error::from_state_err)?;
-
-        let stake = Stake::new(&stake_sk, value, stake.nonce + 1);
-
-        let stake_bytes = rkyv::to_bytes::<_, SCRATCH_SIZE>(&stake)
-            .expect("Should serialize Stake correctly")
-            .to_vec();
-
-        let contract_call = ContractCall {
-            contract: rusk_abi::STAKE_CONTRACT.to_bytes(),
-            fn_name: String::from(TX_STAKE),
-            fn_args: stake_bytes,
-        };
-
-        self.phoenix_transaction(
-            rng,
-            &sender_sk,
-            &receiver_pk,
-            0,
-            gas_limit,
-            gas_price,
-            value,
-            Some(ContractExec::Call(contract_call)),
-        )
-    }
-
-    /// Unstakes a key from the stake contract, using Phoenix notes.
-    pub fn phoenix_unstake<Rng: RngCore + CryptoRng>(
-        &self,
-        rng: &mut Rng,
-        sender_index: u64,
-        staker_index: u64,
-        gas_limit: u64,
-        gas_price: u64,
-    ) -> Result<Transaction, Error<S, SC, PC>> {
-        let sender_sk = self
-            .store
-            .fetch_secret_key(sender_index)
-            .map_err(Error::from_store_err)?;
-        let receiver_pk = PublicKey::from(&sender_sk);
-
-        let stake_sk = self
-            .store
-            .fetch_account_secret_key(staker_index)
-            .map_err(Error::from_store_err)?;
-        let stake_pk = BlsPublicKey::from(&stake_sk);
-
-        let stake = self
-            .state
-            .fetch_stake(&stake_pk)
-            .map_err(Error::from_state_err)?;
-
-        let amount = stake.amount.ok_or(Error::NotStaked {
-            key: stake_pk,
-            stake,
-        })?;
-
-        self.phoenix_transaction(
-            rng,
-            &sender_sk,
-            &receiver_pk,
-            0,
-            gas_limit,
-            gas_price,
-            0,
-            |rng: &mut Rng, input_notes: Vec<Note>| {
-                let address = receiver_pk.gen_stealth_address(&JubJubScalar::random(&mut *rng));
-                let note_sk = sender_sk.gen_note_sk(&address);
-
-                let nullifiers = input_notes
-                    .into_iter()
-                    .map(|note| note.gen_nullifier(&sender_sk))
-                    .collect();
-
-                let withdraw = Withdraw::new(
-                    rng,
-                    &note_sk,
-                    rusk_abi::STAKE_CONTRACT.to_bytes(),
-                    amount.value,
-                    WithdrawReceiver::Phoenix(address),
-                    WithdrawReplayToken::Phoenix(nullifiers),
-                );
-
-                let withdraw = StakeWithdraw::new(&stake_sk, withdraw);
-
-                let withdraw_bytes = rkyv::to_bytes::<_, SCRATCH_SIZE>(&withdraw)
-                    .expect("Serializing Withdraw should succeed")
-                    .to_vec();
-
-                ContractCall {
-                    contract: rusk_abi::STAKE_CONTRACT.to_bytes(),
-                    fn_name: String::from(TX_UNSTAKE),
-                    fn_args: withdraw_bytes,
-                }
-            },
-        )
-    }
-
-    /// Withdraw the accumulated staking reward for a key, into Phoenix notes.
-    /// Rewards are accumulated by participating in the consensus.
-    pub fn phoenix_withdraw<Rng: RngCore + CryptoRng>(
-        &self,
-        rng: &mut Rng,
-        sender_index: u64,
-        staker_index: u64,
-        gas_limit: u64,
-        gas_price: u64,
-    ) -> Result<Transaction, Error<S, SC, PC>> {
-        let sender_sk = self
-            .store
-            .fetch_secret_key(sender_index)
-            .map_err(Error::from_store_err)?;
-        let receiver_pk = PublicKey::from(&sender_sk);
-
-        let stake_sk = self
-            .store
-            .fetch_account_secret_key(staker_index)
-            .map_err(Error::from_store_err)?;
-        let stake_pk = BlsPublicKey::from(&stake_sk);
-
-        let stake = self
-            .state
-            .fetch_stake(&stake_pk)
-            .map_err(Error::from_state_err)?;
-
-        if stake.reward == 0 {
-            return Err(Error::NoReward {
-                key: stake_pk,
-                stake,
-            });
-        }
-
-        self.phoenix_transaction(
-            rng,
-            &sender_sk,
-            &receiver_pk,
-            0,
-            gas_limit,
-            gas_price,
-            0,
-            |rng: &mut Rng, input_notes: Vec<Note>| {
-                let address = receiver_pk.gen_stealth_address(&JubJubScalar::random(&mut *rng));
-                let note_sk = sender_sk.gen_note_sk(&address);
-
-                let nullifiers = input_notes
-                    .into_iter()
-                    .map(|note| note.gen_nullifier(&sender_sk))
-                    .collect();
-
-                let withdraw = Withdraw::new(
-                    rng,
-                    &note_sk,
-                    rusk_abi::STAKE_CONTRACT.to_bytes(),
-                    stake.reward,
-                    WithdrawReceiver::Phoenix(address),
-                    WithdrawReplayToken::Phoenix(nullifiers),
-                );
-
-                let unstake = StakeWithdraw::new(&stake_sk, withdraw);
-
-                let unstake_bytes = rkyv::to_bytes::<_, SCRATCH_SIZE>(&unstake)
-                    .expect("Serializing Withdraw should succeed")
-                    .to_vec();
-
-                ContractCall {
-                    contract: rusk_abi::STAKE_CONTRACT.to_bytes(),
-                    fn_name: String::from(TX_WITHDRAW),
-                    fn_args: unstake_bytes,
-                }
-            },
-        )
-    }
-
-    /// Transfer Dusk from one key to another using moonlight.
-    pub fn moonlight_transfer(
-        &self,
-        from: u64,
-        to: BlsPublicKey,
-        value: u64,
-        gas_limit: u64,
-        gas_price: u64,
-    ) -> Result<Transaction, Error<S, SC, PC>> {
-        self.moonlight_transaction(
-            from,
-            Some(to),
-            value,
-            0,
-            gas_limit,
-            gas_price,
-            None::<ContractExec>,
-        )
-    }
-
-    /// Creates a generic moonlight transaction.
-    #[allow(clippy::too_many_arguments)]
-    pub fn moonlight_transaction(
-        &self,
-        from: u64,
-        to: Option<BlsPublicKey>,
-        value: u64,
-        deposit: u64,
-        gas_limit: u64,
-        gas_price: u64,
-        exec: Option<impl Into<ContractExec>>,
-    ) -> Result<Transaction, Error<S, SC, PC>> {
-        let from_sk = self
-            .store
-            .fetch_account_secret_key(from)
-            .map_err(Error::from_store_err)?;
-
-        let from = BlsPublicKey::from(&from_sk);
-
-        let account = self
-            .state
-            .fetch_account(&from)
-            .map_err(Error::from_state_err)?;
-
-        // technically this check is not necessary, but it's nice to not spam
-        // the network with transactions that are unspendable.
-        let max_value = value + deposit + gas_limit * gas_price;
-        if max_value > account.balance {
-            return Err(Error::NotEnoughBalance);
-        }
-        let nonce = account.nonce + 1;
-
-        let payload = MoonlightPayload {
-            from,
-            to,
-            value,
-            deposit,
-            gas_limit,
-            gas_price,
-            nonce,
-            exec: exec.map(Into::into),
-        };
-
-        let digest = payload.to_hash_input_bytes();
-        let signature = from_sk.sign(&from, &digest);
-
-        Ok(Transaction::moonlight(payload, signature))
-    }
-
     /// Gets the balance of a key.
     pub fn get_balance(&self, sk_index: u64) -> Result<BalanceInfo, Error<S, SC, PC>> {
         let sender_sk = self
@@ -758,7 +482,7 @@ fn new_unproven_tx<Rng: RngCore + CryptoRng, SC: StateClient>(
         openings.push(opening);
     }
 
-    let root = state.fetch_root()?;
+    let root = state.fetch_anchor()?;
 
     let tx_skeleton = TxSkeleton {
         root,
