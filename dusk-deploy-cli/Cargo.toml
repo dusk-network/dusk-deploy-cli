@@ -4,13 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-wallet-accessor = { path = "../wallet-accessor" }
-dusk-wallet = "0.22.1"
+wallet = { path = "../wallet" }
+#dusk-wallet = "0.22.1"
 rkyv = { version = "=0.7.39" }
 #dusk-pki = "0.13"
 dusk-bls12_381 = "0.12"
 toml-base-config = "0.1"
-phoenix-core = { version = "0.21", features = ["alloc"] }
+#phoenix-core = { version = "0.21", features = ["alloc"] }
+execution-core = { path = "../../rusk/execution-core" }
+rusk-prover = { path = "../../rusk/rusk-prover" }
 
 clap = { version = "4.0", features = ["derive", "env"] }
 tokio = { version = "1.21", features = ["full"] }
