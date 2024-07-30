@@ -6,16 +6,18 @@
 
 use crate::block::Block;
 use crate::rusk_http_client::RuskHttpClient;
-use crate::utils::{RuskUtils, POSEIDON_TREE_DEPTH, TRANSFER_CONTRACT_STR};
+use crate::utils::{RuskUtils, POSEIDON_TREE_DEPTH, TRANSFER_CONTRACT_STR, TRANSFER_CONTRACT};
 use crate::Error;
 use dusk_bytes::Serializable;
-use execution_core::transfer::AccountData;
+use execution_core::transfer::{AccountData, TreeLeaf};
 use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
 use futures::StreamExt;
 use poseidon_merkle::Opening as PoseidonOpening;
 use std::collections::HashMap;
+use std::mem;
 use std::sync::{Arc, RwLock};
 use tracing::info;
+use zk_citadel_moat::{ContractInquirer, StreamAux};
 use wallet::StateClient;
 
 #[derive(Debug)]
@@ -67,13 +69,32 @@ impl StateClient for DCliStateClient {
         };
 
         info!("Requesting notes from height {}", vk_cache.last_height);
-        let vk_bytes = vk.to_bytes();
+        // let vk_bytes = vk.to_bytes();
 
-        let stream = RuskUtils::default()
-            .get_notes(vk_bytes.as_ref(), vk_cache.last_height)
-            .wait()?;
-
-        let response_notes = stream.collect::<Vec<(Note, u64)>>().wait();
+        // let stream = RuskUtils::default()
+        //     .get_notes(vk_bytes.as_ref(), vk_cache.last_height)
+        //     .wait()?;
+        //
+        // let response_notes = stream.collect::<Vec<(Note, u64)>>().wait();
+        let mut response_notes = Vec::new();
+        let stream = ContractInquirer::query_contract_with_feeder(
+            rusk_http_client,
+            vk_cache.last_height,
+            TRANSFER_CONTRACT,
+            "leaves_from_height"
+        )
+        .wait()?;
+        const ITEM_LEN: usize = mem::size_of::<(u64, Note)>();
+        StreamAux::find_items::<(u64, Vec<u8>), ITEM_LEN>(
+            |leaf|{
+                let leaf = rkyv::from_bytes::<TreeLeaf>(&bytes)
+                    .expect("The contract should always return valid leaves");
+                if vk.owns(leaf.stealth_address()) {
+                    response_notes.push((leaf.block_height, leaf.note))
+                }
+            },
+            stream,
+        )?;
 
         for (note, block_height) in response_notes {
             // Filter out duplicated notes and update the last

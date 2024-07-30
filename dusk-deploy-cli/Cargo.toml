@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 wallet = { path = "../wallet" }
+zk-citadel-moat = "0.1"
 #dusk-wallet = "0.22.1"
 rkyv = { version = "0.7", default-features = false, features = ["size_32"] }
 bytecheck = { version = "0.6", default-features = false }
