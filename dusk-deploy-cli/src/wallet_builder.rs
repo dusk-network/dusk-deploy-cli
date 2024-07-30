@@ -7,9 +7,12 @@
 use crate::dcli_state_client::DCliStateClient;
 use crate::rusk_http_client::RuskHttpClient;
 use crate::Error;
+use dusk_bytes::DeserializableSlice;
+use dusk_plonk::prelude::Proof;
 use execution_core::transfer::Transaction;
 use rusk_prover::{LocalProver, Prover, UnprovenTransaction};
 use std::fmt::Debug;
+use std::sync::Arc;
 use wallet::{Store, Wallet};
 
 #[derive(Debug, Clone)]
@@ -43,7 +46,7 @@ impl wallet::ProverClient for DcliProverClient {
     ) -> Result<Transaction, Self::Error> {
         let utx_bytes = &utx.to_var_bytes()[..];
         let proof = self.prover.prove_execute(utx_bytes)?;
-        let proof = Proof::from_slice(&proof).map_err(Error::Serialization)?;
+        let proof = Proof::from_slice(&proof).map_err(|e| Error::Serialization(Arc::from(e)))?;
         let tx = utx.clone().gen_transaction(proof);
 
         //Propagate is not required yet
@@ -62,7 +65,7 @@ impl WalletBuilder {
 
         let wallet = wallet::Wallet::new(
             DcliStore,
-            DCliStateClient::new(RuskHttpClient::new(url.to_string())),
+            DCliStateClient::new(RuskHttpClient::new(url.as_ref().to_string())),
             DcliProverClient::default(),
         );
         Ok(wallet)

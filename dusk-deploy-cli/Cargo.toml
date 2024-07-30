@@ -14,6 +14,7 @@ toml-base-config = "0.1"
 #phoenix-core = { version = "0.21", features = ["alloc"] }
 execution-core = { path = "../../rusk/execution-core" }
 rusk-prover = { path = "../../rusk/rusk-prover" }
+dusk-plonk = "0.19"
 poseidon-merkle = { version = "0.6", features = ["rkyv-impl"] }
 
 clap = { version = "4.0", features = ["derive", "env"] }

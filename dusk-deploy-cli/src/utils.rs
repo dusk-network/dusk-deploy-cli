@@ -97,7 +97,7 @@ impl RuskUtils {
 
         let vk = match vk.is_empty() {
             false => {
-                let vk = ViewKey::from_slice(vk).map_err(Error::Serialization())?;
+                let vk = ViewKey::from_slice(vk).map_err(|e| Error::Serialization(Arc::from(e)))?;
                 Some(vk)
             }
             true => None,

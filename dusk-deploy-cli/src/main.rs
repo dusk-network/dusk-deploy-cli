@@ -30,9 +30,9 @@ async fn main() -> Result<(), Error> {
     let cli = Args::parse();
 
     let config_path = cli.config_path.as_path();
-    let wallet_path = cli.wallet_path.as_path();
-    let password = cli.wallet_pass;
-    let pwd_hash = cli.pwd_hash;
+    let _wallet_path = cli.wallet_path.as_path();
+    let _password = cli.wallet_pass;
+    let _pwd_hash = cli.pwd_hash;
     let gas_limit = cli.gas_limit;
     let gas_price = cli.gas_price;
     let contract_path = cli.contract_path.as_path();
@@ -60,13 +60,13 @@ async fn main() -> Result<(), Error> {
 
     let rusk_http_client_url = blockchain_access_config.rusk_address;
 
-    let constructor_args = None;
+    let constructor_args: Option<Vec<u8>> = None;
 
     let wallet_index = 0;
 
     let result = Deployer::deploy(
         rusk_http_client_url,
-        bytecode.as_ref(),
+        bytecode,
         owner,
         constructor_args,
         nonce,

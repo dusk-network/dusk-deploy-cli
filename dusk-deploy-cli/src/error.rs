@@ -14,10 +14,10 @@ pub enum Error {
     #[error("Deploy: {0:?}")]
     #[allow(dead_code)]
     Deploy(Cow<'static, str>),
-    /// Wallet
-    #[error(transparent)]
-    #[allow(dead_code)]
-    Wallet(Arc<dusk_wallet::Error>),
+    // Wallet
+    // #[error(transparent)]
+    // #[allow(dead_code)]
+    // Wallet(Arc<dusk_wallet::Error>),
     /// Not found error
     #[error("Not found: {0:?}")]
     NotFound(Cow<'static, str>),
@@ -34,15 +34,18 @@ pub enum Error {
     #[error("Rusk error occurred: {0}")]
     Rusk(String),
     /// Bytes Serialization Errors
-    #[error(transparent)]
+    #[error("Serialization error occurred: {0:?}")]
     Serialization(Arc<dusk_bytes::Error>),
+    /// Prover Errors
+    #[error("Prover error occurred: {0:?}")]
+    Prover(Arc<rusk_prover::ProverError>),
 }
 
-impl From<dusk_wallet::Error> for Error {
-    fn from(e: dusk_wallet::Error) -> Self {
-        Error::Wallet(Arc::from(e))
-    }
-}
+// impl From<dusk_wallet::Error> for Error {
+//     fn from(e: dusk_wallet::Error) -> Self {
+//         Error::Wallet(Arc::from(e))
+//     }
+// }
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
@@ -59,5 +62,11 @@ impl From<reqwest::Error> for Error {
 impl From<dusk_bytes::Error> for Error {
     fn from(err: dusk_bytes::Error) -> Self {
         Self::Serialization(Arc::from(err))
+    }
+}
+
+impl From<rusk_prover::ProverError> for Error {
+    fn from(err: rusk_prover::ProverError) -> Self {
+        Error::Prover(Arc::from(err))
     }
 }
