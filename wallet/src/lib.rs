@@ -16,9 +16,10 @@ mod imp;
 
 use alloc::vec::Vec;
 use dusk_bytes::{DeserializableSlice, Serializable, Write};
+use execution_core::transfer::AccountData;
 use execution_core::{
     transfer::{Transaction, TRANSFER_TREE_DEPTH},
-    BlsScalar, BlsSecretKey, Note, SecretKey, ViewKey,
+    BlsPublicKey, BlsScalar, BlsSecretKey, Note, SecretKey, ViewKey,
 };
 use poseidon_merkle::Opening as PoseidonOpening;
 use rand_chacha::ChaCha12Rng;
@@ -146,8 +147,8 @@ pub trait StateClient {
     // `Default` stake info should be returned.
     // fn fetch_stake(&self, pk: &BlsPublicKey) -> Result<StakeData, Self::Error>;
 
-    // Queries the account data for a given key.
-    // fn fetch_account(&self, pk: &BlsPublicKey) -> Result<AccountData, Self::Error>;
+    /// Queries the account data for a given key.
+    fn fetch_account(&self, pk: &BlsPublicKey) -> Result<AccountData, Self::Error>;
 }
 
 /// Information about the balance of a particular key.

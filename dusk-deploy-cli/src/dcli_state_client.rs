@@ -4,24 +4,39 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
+use crate::block::Block;
 use crate::rusk_http_client::RuskHttpClient;
+use crate::utils::{RuskUtils, POSEIDON_TREE_DEPTH, TRANSFER_CONTRACT_STR};
 use crate::Error;
-use execution_core::{BlsScalar, Note, PublicKey, ViewKey};
+use dusk_bytes::Serializable;
+use execution_core::transfer::AccountData;
+use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
+use futures::StreamExt;
 use poseidon_merkle::Opening as PoseidonOpening;
-use std::sync::Mutex;
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
+use tracing::info;
 use wallet::StateClient;
 
-const TRANSFER_CONTRACT: &str = "0100000000000000000000000000000000000000000000000000000000000000"; // todo
-
-pub const POSEIDON_TREE_DEPTH: usize = 17; // todo
-
+#[derive(Debug)]
 pub struct DCliStateClient {
-    pub inner: Mutex<InnerState>,
+    pub client: RuskHttpClient,
+    pub cache: Arc<RwLock<HashMap<Vec<u8>, DummyCacheItem>>>,
 }
 
-struct InnerState {
-    pub client: RuskHttpClient,
-    // cache: Arc<Cache>,
+#[derive(Default, Debug, Clone)]
+pub struct DummyCacheItem {
+    notes: Vec<(Note, u64)>,
+    last_height: u64,
+}
+
+impl DummyCacheItem {
+    fn add(&mut self, note: Note, block_height: u64) {
+        if !self.notes.contains(&(note.clone(), block_height)) {
+            self.notes.push((note.clone(), block_height));
+            self.last_height = block_height;
+        }
+    }
 }
 
 pub type BlockHeight = u64;
@@ -30,11 +45,10 @@ pub type EnrichedNote = (Note, BlockHeight);
 
 impl DCliStateClient {
     pub fn new(rusk_http_client: RuskHttpClient) -> Self {
-        let inner = InnerState {
-            client: rusk_http_client,
-        };
+        let cache = Arc::new(std::sync::RwLock::new(std::collections::HashMap::new()));
         Self {
-            inner: Mutex::new(inner),
+            client: rusk_http_client,
+            cache,
         }
     }
 }
@@ -44,29 +58,42 @@ impl StateClient for DCliStateClient {
     type Error = Error;
 
     /// Find notes for a view key, starting from the given block height.
-    fn fetch_notes(&self, vk: &ViewKey) -> Result<Vec<EnrichedNote>, Self::Error> {
-        let psk = vk.public_spend_key();
-        let state = self.inner.lock().unwrap();
+    fn fetch_notes(&self, vk: &ViewKey) -> Result<Vec<EnrichedNote>, Error> {
+        let cache_read = self.cache.read().unwrap();
+        let mut vk_cache = if cache_read.contains_key(&vk.to_bytes().to_vec()) {
+            cache_read.get(&vk.to_bytes().to_vec()).unwrap().clone()
+        } else {
+            DummyCacheItem::default()
+        };
 
-        Ok(state
-            .cache
-            .notes(&psk)?
-            .into_iter()
-            .map(|data| (data.note, data.height))
-            .collect())
+        info!("Requesting notes from height {}", vk_cache.last_height);
+        let vk_bytes = vk.to_bytes();
+
+        let stream = RuskUtils::default()
+            .get_notes(vk_bytes.as_ref(), vk_cache.last_height)
+            .wait()?;
+
+        let response_notes = stream.collect::<Vec<(Note, u64)>>().wait();
+
+        for (note, block_height) in response_notes {
+            // Filter out duplicated notes and update the last
+            vk_cache.add(note, block_height)
+        }
+        drop(cache_read);
+        self.cache
+            .write()
+            .unwrap()
+            .insert(vk.to_bytes().to_vec(), vk_cache.clone());
+
+        Ok(vk_cache.notes)
     }
 
     /// Fetch the current anchor of the state.
     fn fetch_anchor(&self) -> Result<BlsScalar, Self::Error> {
-        let state = self.inner.lock().unwrap();
-
-        self.status("Fetching anchor...");
-
-        let anchor = state
+        let anchor = self
             .client
-            .contract_query::<(), 0>(TRANSFER_CONTRACT, "root", &())
+            .contract_query::<(), 0>(TRANSFER_CONTRACT_STR, "root", &())
             .wait()?;
-        self.status("Anchor received!");
         let anchor = rkyv::from_bytes(&anchor).map_err(|_| Error::Rkyv)?;
         Ok(anchor)
     }
@@ -84,19 +111,18 @@ impl StateClient for DCliStateClient {
     fn fetch_opening(
         &self,
         note: &Note,
-    ) -> Result<PoseidonOpening<(), POSEIDON_TREE_DEPTH, 4>, Self::Error> {
-        let state = self.inner.lock().unwrap();
-
-        self.status("Fetching opening notes...");
-
-        let data = state
+    ) -> Result<PoseidonOpening<(), POSEIDON_TREE_DEPTH>, Self::Error> {
+        let data = self
             .client
-            .contract_query::<_, 1024>(TRANSFER_CONTRACT, "opening", note.pos())
+            .contract_query::<_, 1024>(TRANSFER_CONTRACT_STR, "opening", note.pos())
             .wait()?;
-
-        self.status("Opening notes received!");
 
         let branch = rkyv::from_bytes(&data).map_err(|_| Error::Rkyv)?;
         Ok(branch)
+    }
+
+    fn fetch_account(&self, pk: &BlsPublicKey) -> Result<AccountData, Self::Error> {
+        let account = RuskUtils::default().account(pk)?;
+        Ok(account)
     }
 }

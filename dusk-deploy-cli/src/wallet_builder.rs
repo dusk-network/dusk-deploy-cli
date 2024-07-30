@@ -9,10 +9,8 @@ use crate::rusk_http_client::RuskHttpClient;
 use crate::Error;
 use execution_core::transfer::Transaction;
 use rusk_prover::{LocalProver, Prover, UnprovenTransaction};
-use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex, RwLock};
-use wallet::{ProverClient, StateClient, Store, Wallet};
+use wallet::{Store, Wallet};
 
 #[derive(Debug, Clone)]
 pub struct DcliStore;
@@ -54,15 +52,12 @@ impl wallet::ProverClient for DcliProverClient {
     }
 }
 
-pub struct WalletBuilder<S, SC, PC>;
+pub struct WalletBuilder;
 
-impl<S, SC, PC> WalletBuilder<S, SC, PC>
-where
-    S: Store,
-    SC: StateClient,
-    PC: ProverClient,
-{
-    pub fn build(url: impl AsRef<str>) -> Result<Wallet<S, SC, PC>, Error> {
+impl WalletBuilder {
+    pub fn build(
+        url: impl AsRef<str>,
+    ) -> Result<Wallet<DcliStore, DCliStateClient, DcliProverClient>, Error> {
         // let cache = Arc::new(RwLock::new(HashMap::new()));
 
         let wallet = wallet::Wallet::new(

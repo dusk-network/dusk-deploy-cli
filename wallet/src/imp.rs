@@ -12,6 +12,7 @@ use alloc::string::FromUtf8Error;
 use alloc::vec::Vec;
 
 use dusk_bytes::Error as BytesError;
+use execution_core::transfer::AccountData;
 use execution_core::{
     stake::StakeData,
     transfer::{ContractCall, ContractDeploy, ContractExec, Fee, PhoenixPayload, Transaction},
@@ -422,23 +423,6 @@ where
         let value = spendable + values.iter().skip(MAX_INPUT_NOTES).sum::<u64>();
 
         Ok(BalanceInfo { value, spendable })
-    }
-
-    /// Gets the stake and the expiration of said stake for a key.
-    pub fn get_stake(&self, sk_index: u64) -> Result<StakeData, Error<S, SC, PC>> {
-        let account_sk = self
-            .store
-            .fetch_account_secret_key(sk_index)
-            .map_err(Error::from_store_err)?;
-
-        let account_pk = BlsPublicKey::from(&account_sk);
-
-        let stake = self
-            .state
-            .fetch_stake(&account_pk)
-            .map_err(Error::from_state_err)?;
-
-        Ok(stake)
     }
 
     /// Gets the account data for a key.

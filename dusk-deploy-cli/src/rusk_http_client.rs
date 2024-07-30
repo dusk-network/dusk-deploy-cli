@@ -38,7 +38,7 @@ impl RuskRequest {
         Ok(buffer)
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// Rusk HTTP Binary Client
 pub struct RuskHttpClient {
     uri: String,

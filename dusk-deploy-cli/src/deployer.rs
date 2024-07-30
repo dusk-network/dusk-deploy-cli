@@ -4,14 +4,12 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use crate::dcli_state_client::DCliStateClient;
 use execution_core::bytecode::Bytecode;
 use execution_core::transfer::{ContractDeploy, ContractExec};
 use rand::prelude::*;
 use rand::rngs::StdRng;
-use wallet::Wallet;
 
-use crate::wallet_builder::{DcliProverClient, DcliStore, WalletBuilder};
+use crate::wallet_builder::WalletBuilder;
 use crate::Error;
 
 fn bytecode_hash(bytecode: impl AsRef<[u8]>) -> [u8; 32] {
@@ -35,22 +33,24 @@ impl Deployer {
         let mut rng = StdRng::seed_from_u64(0xcafe);
         let hash = bytecode_hash(bytecode.as_ref());
         let wallet = WalletBuilder::build(rusk_http_client_url)?;
-        wallet.phoenix_execute(
-            rng,
-            ContractExec::Deploy(ContractDeploy {
-                bytecode: Bytecode {
-                    hash,
-                    bytes: bytecode.as_ref().to_vec(),
-                },
-                owner,
-                constructor_args,
-                nonce,
-            }),
-            wallet_index,
-            gas_limit,
-            gas_price,
-            0u64,
-        )?;
+        wallet
+            .phoenix_execute(
+                &mut rng,
+                ContractExec::Deploy(ContractDeploy {
+                    bytecode: Bytecode {
+                        hash,
+                        bytes: bytecode.as_ref().to_vec(),
+                    },
+                    owner: owner.as_ref().to_vec(),
+                    constructor_args: constructor_args.map(|a| a.as_ref().to_vec()),
+                    nonce,
+                }),
+                wallet_index,
+                gas_limit,
+                gas_price,
+                0u64,
+            )
+            .expect("Deployment should succeed"); // todo: error processing
 
         Ok(())
     }

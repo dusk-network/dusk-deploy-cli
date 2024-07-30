@@ -5,16 +5,19 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 mod args;
+mod block;
+mod config;
 mod dcli_state_client;
 mod deployer;
 mod error;
 mod rusk_http_client;
+mod utils;
 mod wallet_builder;
 
 use crate::args::Args;
+use crate::config::BlockchainAccessConfig;
 use crate::error::Error;
 use clap::Parser;
-use std::fs;
 use std::fs::File;
 use std::io::Read;
 use toml_base_config::BaseConfig;
@@ -54,6 +57,12 @@ async fn main() -> Result<(), Error> {
     // let wallet = Wallet::from_file(wallet_accessor)?;
 
     // let (_psk, _ssk) = wallet.spending_keys(wallet.default_address())?;
+
+    let rusk_http_client_url = blockchain_access_config.rusk_address;
+
+    let constructor_args = None;
+
+    let wallet_index = 0;
 
     let result = Deployer::deploy(
         rusk_http_client_url,
