@@ -4,6 +4,8 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
+use crate::dcli_state_client::DCliStateClient;
+use crate::wallet_builder::{DcliProverClient, DcliStore};
 use std::borrow::Cow;
 use std::sync::Arc;
 use thiserror::Error;
@@ -18,9 +20,9 @@ pub enum Error {
     // #[error(transparent)]
     // #[allow(dead_code)]
     // Wallet(Arc<dusk_wallet::Error>),
-    /// Not found error
-    #[error("Not found: {0:?}")]
-    NotFound(Cow<'static, str>),
+    // Not found error
+    // #[error("Not found: {0:?}")]
+    // NotFound(Cow<'static, str>),
     /// IO
     #[error(transparent)]
     IO(Arc<std::io::Error>),
@@ -39,13 +41,34 @@ pub enum Error {
     /// Prover Errors
     #[error("Prover error occurred: {0:?}")]
     Prover(Arc<rusk_prover::ProverError>),
+    /// Moat Errors
+    #[error("Prover error occurred: {0:?}")]
+    Moat(Arc<zk_citadel_moat::Error>),
+    /// Wallet Errors
+    #[error("Wallet error occurred: {0:?}")]
+    Wallet(Arc<dusk_wallet::Error>),
+    // Wallet2 Errors
+    // #[error("Wallet2 error occurred")] // todo
+    // Wallet2(Arc<wallet::Error<DcliStore, DCliStateClient, DcliProverClient>>),
 }
 
-// impl From<dusk_wallet::Error> for Error {
-//     fn from(e: dusk_wallet::Error) -> Self {
-//         Error::Wallet(Arc::from(e))
-//     }
-// }
+impl From<wallet::Error<DcliStore, DCliStateClient, DcliProverClient>> for Error {
+    fn from(_e: wallet::Error<DcliStore, DCliStateClient, DcliProverClient>) -> Self {
+        Error::Rusk("abc".to_string()) // todo
+    }
+}
+
+impl From<dusk_wallet::Error> for Error {
+    fn from(e: dusk_wallet::Error) -> Self {
+        Error::Wallet(Arc::from(e))
+    }
+}
+
+impl From<zk_citadel_moat::Error> for Error {
+    fn from(e: zk_citadel_moat::Error) -> Self {
+        Error::Moat(Arc::from(e))
+    }
+}
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {

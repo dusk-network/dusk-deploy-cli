@@ -10,8 +10,6 @@ mod config;
 mod dcli_state_client;
 mod deployer;
 mod error;
-mod rusk_http_client;
-mod utils;
 mod wallet_builder;
 
 use crate::args::Args;

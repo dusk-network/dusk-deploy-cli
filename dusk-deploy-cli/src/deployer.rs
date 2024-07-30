@@ -33,24 +33,22 @@ impl Deployer {
         let mut rng = StdRng::seed_from_u64(0xcafe);
         let hash = bytecode_hash(bytecode.as_slice());
         let wallet = WalletBuilder::build(rusk_http_client_url)?;
-        wallet
-            .phoenix_execute(
-                &mut rng,
-                ContractExec::Deploy(ContractDeploy {
-                    bytecode: Bytecode {
-                        hash,
-                        bytes: bytecode,
-                    },
-                    owner: owner.as_ref().to_vec(),
-                    constructor_args,
-                    nonce,
-                }),
-                wallet_index,
-                gas_limit,
-                gas_price,
-                0u64,
-            )
-            .expect("Deployment should succeed"); // todo: error processing
+        wallet.phoenix_execute(
+            &mut rng,
+            ContractExec::Deploy(ContractDeploy {
+                bytecode: Bytecode {
+                    hash,
+                    bytes: bytecode,
+                },
+                owner: owner.as_ref().to_vec(),
+                constructor_args,
+                nonce,
+            }),
+            wallet_index,
+            gas_limit,
+            gas_price,
+            0u64,
+        )?;
 
         Ok(())
     }

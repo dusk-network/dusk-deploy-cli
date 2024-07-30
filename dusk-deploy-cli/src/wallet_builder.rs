@@ -5,10 +5,10 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use crate::dcli_state_client::DCliStateClient;
-use crate::rusk_http_client::RuskHttpClient;
 use crate::Error;
 use dusk_bytes::DeserializableSlice;
 use dusk_plonk::prelude::Proof;
+use dusk_wallet::RuskHttpClient;
 use execution_core::transfer::Transaction;
 use rusk_prover::{LocalProver, Prover, UnprovenTransaction};
 use std::fmt::Debug;

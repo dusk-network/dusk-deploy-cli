@@ -5,22 +5,36 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use crate::block::Block;
-use crate::rusk_http_client::RuskHttpClient;
-use crate::utils::{RuskUtils, POSEIDON_TREE_DEPTH, TRANSFER_CONTRACT_STR, TRANSFER_CONTRACT};
 use crate::Error;
 use dusk_bytes::Serializable;
-use execution_core::transfer::{AccountData, TreeLeaf};
+use dusk_wallet::RuskHttpClient;
+use execution_core::transfer::{AccountData, ContractId, TreeLeaf};
 use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
-use futures::StreamExt;
 use poseidon_merkle::Opening as PoseidonOpening;
 use std::collections::HashMap;
 use std::mem;
 use std::sync::{Arc, RwLock};
 use tracing::info;
-use zk_citadel_moat::{ContractInquirer, StreamAux};
 use wallet::StateClient;
+use zk_citadel_moat::{ContractInquirer, StreamAux};
 
-#[derive(Debug)]
+pub const CONTRACT_ID_BYTES: usize = 32;
+
+#[inline]
+const fn reserved(b: u8) -> ContractId {
+    let mut bytes = [0u8; CONTRACT_ID_BYTES];
+    bytes[0] = b;
+    bytes
+}
+
+/// ID of the genesis transfer contract
+pub const TRANSFER_CONTRACT: ContractId = reserved(0x1);
+
+pub const POSEIDON_TREE_DEPTH: usize = 17; // todo
+
+pub const TRANSFER_CONTRACT_STR: &str =
+    "0100000000000000000000000000000000000000000000000000000000000000";
+
 pub struct DCliStateClient {
     pub client: RuskHttpClient,
     pub cache: Arc<RwLock<HashMap<Vec<u8>, DummyCacheItem>>>,
@@ -69,34 +83,27 @@ impl StateClient for DCliStateClient {
         };
 
         info!("Requesting notes from height {}", vk_cache.last_height);
-        // let vk_bytes = vk.to_bytes();
-
-        // let stream = RuskUtils::default()
-        //     .get_notes(vk_bytes.as_ref(), vk_cache.last_height)
-        //     .wait()?;
-        //
-        // let response_notes = stream.collect::<Vec<(Note, u64)>>().wait();
         let mut response_notes = Vec::new();
-        let stream = ContractInquirer::query_contract_with_feeder(
-            rusk_http_client,
+        let mut stream = ContractInquirer::query_contract_with_feeder(
+            &self.client,
             vk_cache.last_height,
             TRANSFER_CONTRACT,
-            "leaves_from_height"
+            "leaves_from_height",
         )
         .wait()?;
-        const ITEM_LEN: usize = mem::size_of::<(u64, Note)>();
-        StreamAux::find_items::<(u64, Vec<u8>), ITEM_LEN>(
-            |leaf|{
-                let leaf = rkyv::from_bytes::<TreeLeaf>(&bytes)
+        const ITEM_LEN: usize = mem::size_of::<TreeLeaf>();
+        StreamAux::find_items::<Vec<u8>, ITEM_LEN>(
+            |leaf| {
+                let leaf = rkyv::from_bytes::<TreeLeaf>(leaf)
                     .expect("The contract should always return valid leaves");
-                if vk.owns(leaf.stealth_address()) {
+                if vk.owns(leaf.note.stealth_address()) {
                     response_notes.push((leaf.block_height, leaf.note))
                 }
             },
-            stream,
+            &mut stream,
         )?;
 
-        for (note, block_height) in response_notes {
+        for (block_height, note) in response_notes {
             // Filter out duplicated notes and update the last
             vk_cache.add(note, block_height)
         }
@@ -143,7 +150,12 @@ impl StateClient for DCliStateClient {
     }
 
     fn fetch_account(&self, pk: &BlsPublicKey) -> Result<AccountData, Self::Error> {
-        let account = RuskUtils::default().account(pk)?;
+        let data = self
+            .client
+            .contract_query::<_, 1024>(TRANSFER_CONTRACT_STR, "account", pk)
+            .wait()?;
+
+        let account = rkyv::from_bytes(&data).map_err(|_| Error::Rkyv)?;
         Ok(account)
     }
 }
