@@ -17,7 +17,7 @@ pub struct Args {
     pub wallet_path: PathBuf,
 
     /// Blockchain access config directory
-    #[clap(long, default_value = "dusk-deploy-cli/config.toml")]
+    #[clap(long, default_value = "./config.toml")]
     pub config_path: PathBuf,
 
     /// Password for the wallet
@@ -37,7 +37,7 @@ pub struct Args {
     pub gas_price: u64,
 
     /// Path to contract code
-    #[clap(short, long, default_value = "./contract.wasm")]
+    #[clap(short, long, default_value = "./test/bob.wasm")]
     pub contract_path: PathBuf,
 
     /// Hexadecimal string of contract's owner [default: ``]

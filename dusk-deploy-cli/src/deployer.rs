@@ -21,7 +21,8 @@ pub struct Deployer;
 
 impl Deployer {
     pub fn deploy(
-        rusk_http_client_url: impl AsRef<str>,
+        rusk_url: impl AsRef<str>,
+        prover_url: impl AsRef<str>,
         bytecode: Vec<u8>,
         owner: impl AsRef<[u8]>,
         constructor_args: Option<Vec<u8>>,
@@ -32,7 +33,7 @@ impl Deployer {
     ) -> Result<(), Error> {
         let mut rng = StdRng::seed_from_u64(0xcafe);
         let hash = bytecode_hash(bytecode.as_slice());
-        let wallet = WalletBuilder::build(rusk_http_client_url)?;
+        let wallet = WalletBuilder::build(rusk_url, prover_url)?;
         wallet.phoenix_execute(
             &mut rng,
             ContractExec::Deploy(ContractDeploy {

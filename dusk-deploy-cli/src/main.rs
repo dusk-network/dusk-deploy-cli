@@ -57,14 +57,13 @@ async fn main() -> Result<(), Error> {
 
     // let (_psk, _ssk) = wallet.spending_keys(wallet.default_address())?;
 
-    let rusk_http_client_url = blockchain_access_config.rusk_address;
-
     let constructor_args: Option<Vec<u8>> = None;
 
     let wallet_index = 0;
 
     let result = Deployer::deploy(
-        rusk_http_client_url,
+        blockchain_access_config.rusk_address,
+        blockchain_access_config.prover_address,
         bytecode,
         owner,
         constructor_args,
