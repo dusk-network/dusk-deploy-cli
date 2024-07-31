@@ -26,14 +26,16 @@ pub struct WalletBuilder;
 
 impl WalletBuilder {
     pub fn build(
-        url: impl AsRef<str>,
+        url_state: impl AsRef<str>,
+        url_prover: impl AsRef<str>,
     ) -> Result<Wallet<DcliStore, DCliStateClient, DCliProverClient>, Error> {
-        // let cache = Arc::new(RwLock::new(HashMap::new()));
+        let state_client = RuskHttpClient::new(url_state.as_ref().to_string());
+        let prover_client = RuskHttpClient::new(url_prover.as_ref().to_string());
 
         let wallet = wallet::Wallet::new(
             DcliStore,
-            DCliStateClient::new(RuskHttpClient::new(url.as_ref().to_string())),
-            DCliProverClient::default(),
+            DCliStateClient::new(state_client.clone()),
+            DCliProverClient::new(state_client.clone(), prover_client.clone()),
         );
         Ok(wallet)
     }
