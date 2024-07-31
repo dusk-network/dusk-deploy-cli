@@ -7,6 +7,7 @@
 mod args;
 mod block;
 mod config;
+mod dcli_prover_client;
 mod dcli_state_client;
 mod deployer;
 mod error;

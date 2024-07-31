@@ -4,8 +4,9 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
+use crate::dcli_prover_client::DCliProverClient;
 use crate::dcli_state_client::DCliStateClient;
-use crate::wallet_builder::{DcliProverClient, DcliStore};
+use crate::wallet_builder::DcliStore;
 use std::borrow::Cow;
 use std::sync::Arc;
 use thiserror::Error;
@@ -52,8 +53,8 @@ pub enum Error {
     // Wallet2(Arc<wallet::Error<DcliStore, DCliStateClient, DcliProverClient>>),
 }
 
-impl From<wallet::Error<DcliStore, DCliStateClient, DcliProverClient>> for Error {
-    fn from(_e: wallet::Error<DcliStore, DCliStateClient, DcliProverClient>) -> Self {
+impl From<wallet::Error<DcliStore, DCliStateClient, DCliProverClient>> for Error {
+    fn from(_e: wallet::Error<DcliStore, DCliStateClient, DCliProverClient>) -> Self {
         Error::Rusk("abc".to_string()) // todo
     }
 }

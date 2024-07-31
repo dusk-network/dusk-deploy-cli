@@ -12,6 +12,7 @@ use execution_core::transfer::{AccountData, ContractId, TreeLeaf};
 use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
 use poseidon_merkle::Opening as PoseidonOpening;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::mem;
 use std::sync::{Arc, RwLock};
 use tracing::info;
@@ -66,6 +67,12 @@ impl DCliStateClient {
             client: rusk_http_client,
             cache,
         }
+    }
+}
+
+impl Debug for DCliStateClient {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
     }
 }
 
