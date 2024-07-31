@@ -12,9 +12,9 @@ use std::fmt::Debug;
 use wallet::{Store, Wallet};
 
 #[derive(Debug, Clone)]
-pub struct DcliStore;
+pub struct DCliStore;
 
-impl Store for DcliStore {
+impl Store for DCliStore {
     type Error = ();
 
     fn get_seed(&self) -> Result<[u8; 64], Self::Error> {
@@ -28,12 +28,12 @@ impl WalletBuilder {
     pub fn build(
         url_state: impl AsRef<str>,
         url_prover: impl AsRef<str>,
-    ) -> Result<Wallet<DcliStore, DCliStateClient, DCliProverClient>, Error> {
+    ) -> Result<Wallet<DCliStore, DCliStateClient, DCliProverClient>, Error> {
         let state_client = RuskHttpClient::new(url_state.as_ref().to_string());
         let prover_client = RuskHttpClient::new(url_prover.as_ref().to_string());
 
         let wallet = wallet::Wallet::new(
-            DcliStore,
+            DCliStore,
             DCliStateClient::new(state_client.clone()),
             DCliProverClient::new(state_client.clone(), prover_client.clone()),
         );

@@ -17,7 +17,7 @@ pub struct Args {
     pub wallet_path: PathBuf,
 
     /// Blockchain access config directory
-    #[clap(long, default_value = "dusk-deploy-cli/config.toml")]
+    #[clap(long, default_value = "./config.toml")]
     pub config_path: PathBuf,
 
     /// Password for the wallet

@@ -6,7 +6,7 @@
 
 use crate::dcli_prover_client::DCliProverClient;
 use crate::dcli_state_client::DCliStateClient;
-use crate::wallet_builder::DcliStore;
+use crate::wallet_builder::DCliStore;
 use std::borrow::Cow;
 use std::sync::Arc;
 use thiserror::Error;
@@ -33,9 +33,6 @@ pub enum Error {
     /// Http client errors
     #[error(transparent)]
     HttpClient(Arc<reqwest::Error>),
-    /// Rusk error
-    #[error("Rusk error occurred: {0}")]
-    Rusk(String),
     /// Bytes Serialization Errors
     #[error("Serialization error occurred: {0:?}")]
     Serialization(Arc<dusk_bytes::Error>),
@@ -48,14 +45,14 @@ pub enum Error {
     /// Wallet Errors
     #[error("Wallet error occurred: {0:?}")]
     Wallet(Arc<dusk_wallet::Error>),
-    // Wallet2 Errors
-    // #[error("Wallet2 error occurred")] // todo
-    // Wallet2(Arc<wallet::Error<DcliStore, DCliStateClient, DcliProverClient>>),
+    /// Wallet2 Errors
+    #[error("Wallet2 error occurred")] // todo
+    Wallet2(Arc<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>>), // todo: rename
 }
 
-impl From<wallet::Error<DcliStore, DCliStateClient, DCliProverClient>> for Error {
-    fn from(_e: wallet::Error<DcliStore, DCliStateClient, DCliProverClient>) -> Self {
-        Error::Rusk("abc".to_string()) // todo
+impl From<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>> for Error {
+    fn from(e: wallet::Error<DCliStore, DCliStateClient, DCliProverClient>) -> Self {
+        Error::Wallet2(Arc::from(e))
     }
 }
 
