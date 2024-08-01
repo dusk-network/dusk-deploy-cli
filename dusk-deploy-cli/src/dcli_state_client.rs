@@ -7,17 +7,17 @@
 use crate::block::Block;
 use crate::Error;
 use dusk_bytes::Serializable;
-use dusk_wallet::RuskHttpClient;
 use execution_core::transfer::{AccountData, ContractId, TreeLeaf};
 use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
 use poseidon_merkle::Opening as PoseidonOpening;
+use rusk_http_client::RuskHttpClient;
+use rusk_http_client::{ContractInquirer, StreamAux};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::mem;
 use std::sync::{Arc, RwLock};
 use tracing::info;
 use wallet::StateClient;
-use zk_citadel_moat::{ContractInquirer, StreamAux};
 
 pub const CONTRACT_ID_BYTES: usize = 32;
 
@@ -35,6 +35,8 @@ pub const POSEIDON_TREE_DEPTH: usize = 17; // todo
 
 pub const TRANSFER_CONTRACT_STR: &str =
     "0100000000000000000000000000000000000000000000000000000000000000";
+
+const ITEM_LEN: usize = mem::size_of::<TreeLeaf>();
 
 pub struct DCliStateClient {
     pub client: RuskHttpClient,
@@ -98,17 +100,17 @@ impl StateClient for DCliStateClient {
             "leaves_from_height",
         )
         .wait()?;
-        const ITEM_LEN: usize = mem::size_of::<TreeLeaf>();
-        StreamAux::find_items::<Vec<u8>, ITEM_LEN>(
+        println!("obtained stream");
+        StreamAux::find_items::<TreeLeaf, ITEM_LEN>(
             |leaf| {
-                let leaf = rkyv::from_bytes::<TreeLeaf>(leaf)
-                    .expect("The contract should always return valid leaves");
                 if vk.owns(leaf.note.stealth_address()) {
-                    response_notes.push((leaf.block_height, leaf.note))
+                    println!("owned note value={:?}", leaf.note.value(None));
+                    response_notes.push((leaf.block_height, leaf.note.clone()))
                 }
             },
             &mut stream,
         )?;
+        println!("after find items, notes size={}", response_notes.len());
 
         for (block_height, note) in response_notes {
             // Filter out duplicated notes and update the last

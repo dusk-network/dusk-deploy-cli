@@ -30,10 +30,11 @@ impl Deployer {
         wallet_index: u64,
         gas_limit: u64,
         gas_price: u64,
+        seed: &[u8; 64],
     ) -> Result<(), Error> {
         let mut rng = StdRng::seed_from_u64(0xcafe);
         let hash = bytecode_hash(bytecode.as_slice());
-        let wallet = WalletBuilder::build(rusk_url, prover_url)?;
+        let wallet = WalletBuilder::build(rusk_url, prover_url, seed)?;
         wallet.phoenix_execute(
             &mut rng,
             ContractExec::Deploy(ContractDeploy {

@@ -9,6 +9,7 @@ mod block;
 mod config;
 mod dcli_prover_client;
 mod dcli_state_client;
+mod dcli_store;
 mod deployer;
 mod error;
 mod wallet_builder;
@@ -38,28 +39,20 @@ async fn main() -> Result<(), Error> {
     let owner = cli.owner;
     let nonce = cli.nonce;
 
-    // let wallet_path = WalletPath::from(wallet_path.join("wallet.dat"));
-    // let _ = fs::metadata(config_path)
-    //     .map_err(|_| Error::NotFound(config_path.to_string_lossy().into_owned().into()))?;
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
-    // let psw = if pwd_hash.is_empty() {
-    //     Pwd(password)
-    // } else {
-    //     PwdHash(pwd_hash)
-    // };
 
     let mut bytecode_file = File::open(contract_path)?;
     let mut bytecode = Vec::new();
     bytecode_file.read_to_end(&mut bytecode)?;
 
-    // let wallet_accessor = WalletAccessor::create(wallet_path.clone(), psw.clone())?;
-    // let wallet = Wallet::from_file(wallet_accessor)?;
-
-    // let (_psk, _ssk) = wallet.spending_keys(wallet.default_address())?;
-
     let constructor_args: Option<Vec<u8>> = None;
 
     let wallet_index = 0;
+
+    let seed_vec = hex::decode("7965013909185294fa0f0d2a2be850ee89389e45d17e0c7da9a7588901648086c5b3ac52d95b6fd421104b6a77ca21772f0a041f031c3c8039ae3b24c48467bd")
+        .expect("decoding seed should succeed");
+    let mut seed = [0u8; 64];
+    seed.copy_from_slice(seed_vec.as_slice());
 
     let result = Deployer::deploy(
         blockchain_access_config.rusk_address,
@@ -71,6 +64,7 @@ async fn main() -> Result<(), Error> {
         wallet_index,
         gas_limit,
         gas_price,
+        &seed,
     );
 
     println!("deployment result = {:?}", result);

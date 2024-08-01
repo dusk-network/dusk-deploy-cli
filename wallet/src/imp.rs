@@ -11,7 +11,7 @@ use core::convert::Infallible;
 use alloc::string::FromUtf8Error;
 use alloc::vec::Vec;
 
-use dusk_bytes::Error as BytesError;
+use dusk_bytes::{Error as BytesError, Serializable};
 use execution_core::transfer::AccountData;
 use execution_core::{
     stake::StakeData,
@@ -241,6 +241,7 @@ where
         ),
         Error<S, SC, PC>,
     > {
+        println!("about to fetch nodes");
         let notes = self.unspent_notes(sender_sk)?;
         let mut notes_and_values = Vec::with_capacity(notes.len());
 
@@ -357,11 +358,14 @@ where
     where
         Rng: RngCore + CryptoRng,
     {
+        println!("about to fetch secret key");
         let sender_sk = self
             .store
             .fetch_secret_key(sender_index)
             .map_err(Error::from_store_err)?;
         let receiver_pk = PublicKey::from(&sender_sk);
+
+        println!("secret_key={}", hex::encode(sender_sk.to_bytes()));
 
         self.phoenix_transaction(
             rng,
