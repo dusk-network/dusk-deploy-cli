@@ -6,7 +6,7 @@
 
 use crate::dcli_prover_client::DCliProverClient;
 use crate::dcli_state_client::DCliStateClient;
-use crate::wallet_builder::DCliStore;
+use crate::dcli_store::DCliStore;
 use std::borrow::Cow;
 use std::sync::Arc;
 use thiserror::Error;

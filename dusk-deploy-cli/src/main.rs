@@ -9,6 +9,7 @@ mod block;
 mod config;
 mod dcli_prover_client;
 mod dcli_state_client;
+mod dcli_store;
 mod deployer;
 mod error;
 mod wallet_builder;
