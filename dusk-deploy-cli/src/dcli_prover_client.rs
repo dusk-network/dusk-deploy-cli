@@ -24,7 +24,7 @@ impl DCliProverClient {
         DCliProverClient {
             state,
             prover,
-            status: |_| {},
+            status: |a| println!("{}", a),
         }
     }
 
@@ -52,20 +52,21 @@ impl wallet::ProverClient for DCliProverClient {
         let utx_bytes = utx.to_var_bytes();
         let prove_req = RuskRequest::new("prove_execute", utx_bytes);
         let proof_bytes = self.prover.call(2, "rusk", &prove_req).wait()?;
-        // self.status("Proof success!");
+        self.status("Proof success!");
         let proof = Proof::from_slice(&proof_bytes)?;
         let tx = utx.clone().gen_transaction(proof);
+        let tx = Transaction::Phoenix(tx);
         let tx_bytes = tx.to_var_bytes();
 
-        // self.status("Attempt to preverify tx...");
+        self.status("Attempt to preverify tx...");
         let preverify_req = RuskRequest::new("preverify", tx_bytes.clone());
         let _ = self.state.call(2, "rusk", &preverify_req).wait()?;
-        // self.status("Preverify success!");
+        self.status("Preverify success!");
 
-        // self.status("Propagating tx...");
+        self.status("Propagating tx...");
         let propagate_req = RuskRequest::new("propagate_tx", tx_bytes);
         let _ = self.state.call(2, "Chain", &propagate_req).wait()?;
-        // self.status("Transaction propagated!");
+        self.status("Transaction propagated!");
 
         Ok(tx.into())
     }

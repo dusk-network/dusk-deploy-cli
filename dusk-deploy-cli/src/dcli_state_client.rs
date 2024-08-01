@@ -104,6 +104,7 @@ impl StateClient for DCliStateClient {
         StreamAux::find_items::<TreeLeaf, ITEM_LEN>(
             |leaf| {
                 if vk.owns(leaf.note.stealth_address()) {
+                    println!("owned note value={:?}", leaf.note.value(None));
                     response_notes.push((leaf.block_height, leaf.note.clone()))
                 }
             },
