@@ -357,6 +357,7 @@ where
     where
         Rng: RngCore + CryptoRng,
     {
+        println!("about to fetch secret key");
         let sender_sk = self
             .store
             .fetch_secret_key(sender_index)

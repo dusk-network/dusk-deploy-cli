@@ -18,7 +18,14 @@ impl Store for DCliStore {
     type Error = ();
 
     fn get_seed(&self) -> Result<[u8; 64], Self::Error> {
-        Ok([0; 64])
+        let seed = hex::decode("7965013909185294fa0f0d2a2be850ee89389e45d17e0c7da9a7588901648086c5b3ac52d95b6fd421104b6a77ca21772f0a041f031c3c8039ae3b24c48467bd")
+            .expect("decoding seed should succeed");
+        assert_eq!(seed.len(), 64);
+        let a: [u8; 64] = seed
+            .try_into()
+            .expect("seed conversion to array should succeed");
+        println!("seed={}", hex::encode(a.clone()));
+        Ok(a)
     }
 }
 
