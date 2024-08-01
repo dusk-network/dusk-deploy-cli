@@ -2,8 +2,8 @@ use crate::block::Block;
 use crate::Error;
 use dusk_bytes::DeserializableSlice;
 use dusk_plonk::prelude::Proof;
-use dusk_wallet::{RuskHttpClient, RuskRequest};
 use execution_core::transfer::Transaction;
+use rusk_http_client::{RuskHttpClient, RuskRequest};
 use rusk_prover::UnprovenTransaction;
 use std::fmt::Debug;
 

@@ -7,17 +7,17 @@
 use crate::block::Block;
 use crate::Error;
 use dusk_bytes::Serializable;
-use dusk_wallet::RuskHttpClient;
 use execution_core::transfer::{AccountData, ContractId, TreeLeaf};
 use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
 use poseidon_merkle::Opening as PoseidonOpening;
+use rusk_http_client::RuskHttpClient;
+use rusk_http_client::{ContractInquirer, StreamAux};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::mem;
 use std::sync::{Arc, RwLock};
 use tracing::info;
 use wallet::StateClient;
-use zk_citadel_moat::{ContractInquirer, StreamAux};
 
 pub const CONTRACT_ID_BYTES: usize = 32;
 

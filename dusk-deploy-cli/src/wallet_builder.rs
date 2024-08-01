@@ -7,7 +7,7 @@
 use crate::dcli_prover_client::DCliProverClient;
 use crate::dcli_state_client::DCliStateClient;
 use crate::Error;
-use dusk_wallet::RuskHttpClient;
+use rusk_http_client::RuskHttpClient;
 use std::fmt::Debug;
 use wallet::{Store, Wallet};
 
