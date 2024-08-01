@@ -36,13 +36,13 @@ pub enum Error {
     #[error("Prover error occurred: {0:?}")]
     Prover(Arc<rusk_prover::ProverError>),
     /// Wallet2 Errors
-    #[error("Wallet2 error occurred")] // todo
-    Wallet2(Arc<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>>), // todo: rename
+    #[error("Wallet error occurred")] // todo
+    Wallet(Arc<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>>),
 }
 
 impl From<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>> for Error {
     fn from(e: wallet::Error<DCliStore, DCliStateClient, DCliProverClient>) -> Self {
-        Error::Wallet2(Arc::from(e))
+        Error::Wallet(Arc::from(e))
     }
 }
 
