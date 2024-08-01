@@ -17,15 +17,15 @@ impl WalletBuilder {
     pub fn build(
         url_state: impl AsRef<str>,
         url_prover: impl AsRef<str>,
+        seed: &[u8; 64],
     ) -> Result<Wallet<DCliStore, DCliStateClient, DCliProverClient>, Error> {
         let state_client = RuskHttpClient::new(url_state.as_ref().to_string());
         let prover_client = RuskHttpClient::new(url_prover.as_ref().to_string());
 
-        let wallet = wallet::Wallet::new(
-            DCliStore,
+        Ok(wallet::Wallet::new(
+            DCliStore::new(seed),
             DCliStateClient::new(state_client.clone()),
             DCliProverClient::new(state_client.clone(), prover_client.clone()),
-        );
-        Ok(wallet)
+        ))
     }
 }
