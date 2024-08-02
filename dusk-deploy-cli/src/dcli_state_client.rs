@@ -139,9 +139,20 @@ impl StateClient for DCliStateClient {
     /// nullifiers.
     fn fetch_existing_nullifiers(
         &self,
-        _nullifiers: &[BlsScalar],
+        nullifiers: &[BlsScalar],
     ) -> Result<Vec<BlsScalar>, Self::Error> {
-        Ok(vec![])
+        if nullifiers.is_empty() {
+            return Ok(vec![]);
+        }
+        let nullifiers = nullifiers.to_vec();
+        let data = self
+            .client
+            .contract_query::<_, 1024>(TRANSFER_CONTRACT_STR, "existing_nullifiers", &nullifiers)
+            .wait()?;
+
+        let nullifiers = rkyv::from_bytes(&data).map_err(|_| Error::Rkyv)?;
+
+        Ok(nullifiers)
     }
 
     /// Queries the node to find the opening for a specific note.
