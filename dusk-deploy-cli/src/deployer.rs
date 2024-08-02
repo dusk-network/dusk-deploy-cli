@@ -23,8 +23,8 @@ impl Deployer {
     pub fn deploy(
         rusk_url: impl AsRef<str>,
         prover_url: impl AsRef<str>,
-        bytecode: Vec<u8>,
-        owner: impl AsRef<[u8]>,
+        bytecode: &Vec<u8>,
+        owner: &Vec<u8>,
         constructor_args: Option<Vec<u8>>,
         nonce: u64,
         wallet_index: u64,
@@ -40,9 +40,9 @@ impl Deployer {
             ContractExec::Deploy(ContractDeploy {
                 bytecode: Bytecode {
                     hash,
-                    bytes: bytecode,
+                    bytes: bytecode.clone(),
                 },
-                owner: owner.as_ref().to_vec(),
+                owner: owner.clone(),
                 constructor_args,
                 nonce,
             }),

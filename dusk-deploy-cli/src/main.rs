@@ -12,6 +12,7 @@ mod dcli_state_client;
 mod dcli_store;
 mod deployer;
 mod error;
+mod gen_id;
 mod wallet_builder;
 
 use crate::args::Args;
@@ -23,6 +24,7 @@ use std::io::Read;
 use toml_base_config::BaseConfig;
 
 use crate::deployer::Deployer;
+use crate::gen_id::gen_contract_id;
 
 #[tokio::main]
 #[allow(non_snake_case)]
@@ -54,11 +56,13 @@ async fn main() -> Result<(), Error> {
     let mut seed = [0u8; 64];
     seed.copy_from_slice(seed_vec.as_slice());
 
+    let owner = hex::decode(owner).expect("decoding owner should succeed");
+
     let result = Deployer::deploy(
         blockchain_access_config.rusk_address,
         blockchain_access_config.prover_address,
-        bytecode,
-        owner,
+        &bytecode,
+        &owner,
         constructor_args,
         nonce,
         wallet_index,
@@ -68,6 +72,10 @@ async fn main() -> Result<(), Error> {
     );
 
     println!("deployment result = {:?}", result);
+    println!(
+        "deployed contract id = {}",
+        hex::encode(gen_contract_id(bytecode, nonce, owner))
+    );
 
     Ok(())
 }

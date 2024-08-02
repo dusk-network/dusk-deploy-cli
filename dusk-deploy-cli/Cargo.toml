@@ -17,6 +17,7 @@ tokio = { version = "1.21", features = ["full"] }
 futures = "0.3"
 rkyv = { version = "0.7", default-features = false, features = ["size_32"] }
 bytecheck = { version = "0.6", default-features = false }
+blake2b_simd = { version = "1", default-features = false }
 toml-base-config = "0.1"
 clap = { version = "4.0", features = ["derive", "env"] }
 serde = { version = "1", features = ["derive"] }
