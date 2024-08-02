@@ -12,21 +12,13 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct Args {
-    /// Wallet directory [default: `$HOME/.dusk/rusk-wallet`]
-    #[clap(short, long, default_value = concat!(env!("HOME"), "/.dusk/rusk-wallet"))]
-    pub wallet_path: PathBuf,
-
     /// Blockchain access config directory
     #[clap(long, default_value = "./config.toml")]
     pub config_path: PathBuf,
 
-    /// Password for the wallet
-    #[clap(long, default_value_t = String::from(""), env = "RUSK_WALLET_PWD")]
-    pub wallet_pass: String,
-
-    /// Hash of the password for the wallet [default: ``]
-    #[clap(short, long, default_value_t = String::from(""))]
-    pub pwd_hash: String,
+    /// Seed phrase [default: ``]
+    #[clap(long, default_value_t = String::from("spice property autumn primary undo innocent pole legend stereo mom eternal topic"))]
+    pub seed: String,
 
     /// Gas limit [default: `500000000`]
     #[clap(long, default_value_t = 500000000)]
@@ -37,7 +29,7 @@ pub struct Args {
     pub gas_price: u64,
 
     /// Path to contract code
-    #[clap(short, long, default_value = "./test/alice.wasm")]
+    #[clap(short, long, default_value = "./test/bob.wasm")]
     pub contract_path: PathBuf,
 
     /// Hexadecimal string of contract's owner [default: ``]

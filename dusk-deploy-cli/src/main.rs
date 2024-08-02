@@ -18,9 +18,13 @@ mod wallet_builder;
 use crate::args::Args;
 use crate::config::BlockchainAccessConfig;
 use crate::error::Error;
+use bip39::{Language, Mnemonic, Seed};
 use clap::Parser;
+use execution_core::transfer::ContractId;
+use rusk_http_client::{ContractInquirer, RuskHttpClient};
 use std::fs::File;
 use std::io::Read;
+use std::thread;
 use toml_base_config::BaseConfig;
 
 use crate::deployer::Deployer;
@@ -32,9 +36,7 @@ async fn main() -> Result<(), Error> {
     let cli = Args::parse();
 
     let config_path = cli.config_path.as_path();
-    let _wallet_path = cli.wallet_path.as_path();
-    let _password = cli.wallet_pass;
-    let _pwd_hash = cli.pwd_hash;
+    let seed_phrase = cli.seed;
     let gas_limit = cli.gas_limit;
     let gas_price = cli.gas_price;
     let contract_path = cli.contract_path.as_path();
@@ -47,19 +49,26 @@ async fn main() -> Result<(), Error> {
     let mut bytecode = Vec::new();
     bytecode_file.read_to_end(&mut bytecode)?;
 
-    let constructor_args: Option<Vec<u8>> = None;
+    let constructor_args: Option<Vec<u8>> = Some(vec![38u8]);
 
     let wallet_index = 0;
 
-    let seed_vec = hex::decode("7965013909185294fa0f0d2a2be850ee89389e45d17e0c7da9a7588901648086c5b3ac52d95b6fd421104b6a77ca21772f0a041f031c3c8039ae3b24c48467bd")
-        .expect("decoding seed should succeed");
+    // let seed_vec = hex::decode("7965013909185294fa0f0d2a2be850ee89389e45d17e0c7da9a7588901648086c5b3ac52d95b6fd421104b6a77ca21772f0a041f031c3c8039ae3b24c48467bd")
+    //     .expect("decoding seed should succeed");
+    // let mut seed = [0u8; 64];
+    // seed.copy_from_slice(seed_vec.as_slice());
+
+    let phrase = seed_phrase.to_string();
+    let mnemonic = Mnemonic::from_phrase(&phrase, Language::English)
+        .map_err(|_| Error::InvalidMnemonicPhrase)?;
+    let seed_obj = Seed::new(&mnemonic, "");
     let mut seed = [0u8; 64];
-    seed.copy_from_slice(seed_vec.as_slice());
+    seed.copy_from_slice(seed_obj.as_bytes());
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
     let result = Deployer::deploy(
-        blockchain_access_config.rusk_address,
+        blockchain_access_config.rusk_address.clone(),
         blockchain_access_config.prover_address,
         &bytecode,
         &owner,
@@ -71,11 +80,35 @@ async fn main() -> Result<(), Error> {
         &seed,
     );
 
-    println!("deployment result = {:?}", result);
     println!(
-        "deployed contract id = {}",
-        hex::encode(gen_contract_id(bytecode, nonce, owner))
+        "deployment result for contract: {:?} is: {:?}",
+        contract_path, result
     );
+    let deployed_id = gen_contract_id(bytecode, nonce, owner);
+    println!("deployed contract id: {}", hex::encode(&deployed_id));
+
+    verify_deployment(deployed_id, blockchain_access_config.rusk_address).await;
 
     Ok(())
+}
+
+async fn verify_deployment(contract_id: [u8; 32], rusk_url: impl AsRef<str>) {
+    const METHOD: &str = "value";
+    println!(
+        "verifying deployment by calling contract's method: {}",
+        METHOD
+    );
+
+    thread::sleep(std::time::Duration::from_secs(10));
+
+    let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
+    let r = ContractInquirer::query_contract::<(), u8>(
+        &client,
+        (),
+        ContractId::from(contract_id),
+        METHOD,
+    )
+    .await;
+
+    println!("result of calling the contract's method: {:?}", r);
 }
