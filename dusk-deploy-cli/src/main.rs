@@ -50,7 +50,7 @@ async fn main() -> Result<(), Error> {
     let mut bytecode = Vec::new();
     bytecode_file.read_to_end(&mut bytecode)?;
 
-    let constructor_args: Option<Vec<u8>> = None;
+    let constructor_args: Option<Vec<u8>> = Some(vec![38u8]);
 
     let wallet_index = 0;
 
@@ -78,17 +78,25 @@ async fn main() -> Result<(), Error> {
     let deployed_id = gen_contract_id(bytecode, nonce, owner);
     println!("deployed contract id = {}", hex::encode(&deployed_id));
 
-    thread::sleep(std::time::Duration::from_secs(15));
-
-    let client = RuskHttpClient::new(blockchain_access_config.rusk_address);
-    let r = ContractInquirer::query_contract::<(), ()>(
-        &client,
-        (),
-        ContractId::from(deployed_id),
-        "ping",
-    )
-    .await;
-    println!("result of calling the contract's method: {:?}", r);
+    verify_deployment(deployed_id, blockchain_access_config.rusk_address).await;
 
     Ok(())
+}
+
+async fn verify_deployment(contract_id: [u8; 32], rusk_url: impl AsRef<str>) {
+    const METHOD: &str = "value";
+    println!("verifying deployment by calling contract's method: {}", METHOD);
+
+    thread::sleep(std::time::Duration::from_secs(10));
+
+    let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
+    let r = ContractInquirer::query_contract::<(), u8>(
+        &client,
+        (),
+        ContractId::from(contract_id),
+        METHOD,
+    )
+    .await;
+
+    println!("result of calling the contract's method: {:?}", r);
 }
