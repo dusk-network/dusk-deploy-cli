@@ -19,8 +19,11 @@ use crate::args::Args;
 use crate::config::BlockchainAccessConfig;
 use crate::error::Error;
 use clap::Parser;
+use execution_core::transfer::ContractId;
+use rusk_http_client::{ContractInquirer, RuskHttpClient};
 use std::fs::File;
 use std::io::Read;
+use std::thread;
 use toml_base_config::BaseConfig;
 
 use crate::deployer::Deployer;
@@ -59,7 +62,7 @@ async fn main() -> Result<(), Error> {
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
     let result = Deployer::deploy(
-        blockchain_access_config.rusk_address,
+        blockchain_access_config.rusk_address.clone(),
         blockchain_access_config.prover_address,
         &bytecode,
         &owner,
@@ -72,10 +75,20 @@ async fn main() -> Result<(), Error> {
     );
 
     println!("deployment result = {:?}", result);
-    println!(
-        "deployed contract id = {}",
-        hex::encode(gen_contract_id(bytecode, nonce, owner))
-    );
+    let deployed_id = gen_contract_id(bytecode, nonce, owner);
+    println!("deployed contract id = {}", hex::encode(&deployed_id));
+
+    thread::sleep(std::time::Duration::from_secs(15));
+
+    let client = RuskHttpClient::new(blockchain_access_config.rusk_address);
+    let r = ContractInquirer::query_contract::<(), ()>(
+        &client,
+        (),
+        ContractId::from(deployed_id),
+        "ping",
+    )
+    .await;
+    println!("result of calling the contract's method: {:?}", r);
 
     Ok(())
 }
