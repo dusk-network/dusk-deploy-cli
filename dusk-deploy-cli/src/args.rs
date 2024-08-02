@@ -37,7 +37,7 @@ pub struct Args {
     pub gas_price: u64,
 
     /// Path to contract code
-    #[clap(short, long, default_value = "./test/bob.wasm")]
+    #[clap(short, long, default_value = "./test/alice.wasm")]
     pub contract_path: PathBuf,
 
     /// Hexadecimal string of contract's owner [default: ``]
