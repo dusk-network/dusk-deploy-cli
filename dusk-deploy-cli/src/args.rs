@@ -39,4 +39,12 @@ pub struct Args {
     /// Nonce [default: `0`]
     #[clap(long, default_value_t = 0)]
     pub nonce: u64,
+
+    /// Hexadecimal string of contract's constructor arguments [default: ``]
+    #[clap(short, long, default_value_t = String::from(""))]
+    pub args: String,
+
+    /// Method to call [default: ``]
+    #[clap(short, long, default_value_t = String::from(""))]
+    pub method: String,
 }
