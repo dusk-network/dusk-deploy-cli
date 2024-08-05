@@ -36,11 +36,14 @@ pub enum Error {
     #[error("Prover error occurred: {0:?}")]
     Prover(Arc<rusk_prover::ProverError>),
     /// Wallet Errors
-    #[error("Wallet error occurred")] // todo
+    #[error("Wallet error occurred")]
     Wallet(Arc<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>>),
     /// Seed phrase is not valid
     #[error("Invalid recovery phrase")]
     InvalidMnemonicPhrase,
+    /// Tracing errors
+    #[error("Tracing error")]
+    Tracing,
 }
 
 impl From<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>> for Error {

@@ -17,7 +17,7 @@ pub struct Args {
     pub config_path: PathBuf,
 
     /// Seed phrase [default: ``]
-    #[clap(long, default_value_t = String::from("spice property autumn primary undo innocent pole legend stereo mom eternal topic"))]
+    #[clap(short, long, default_value_t = String::from(""))]
     pub seed: String,
 
     /// Gas limit [default: `500000000`]
@@ -29,7 +29,7 @@ pub struct Args {
     pub gas_price: u64,
 
     /// Path to contract code
-    #[clap(short, long, default_value = "./test/bob.wasm")]
+    #[clap(short, long, default_value = "")]
     pub contract_path: PathBuf,
 
     /// Hexadecimal string of contract's owner [default: ``]
@@ -37,6 +37,10 @@ pub struct Args {
     pub owner: String,
 
     /// Nonce [default: `0`]
-    #[clap(long, default_value_t = 0)]
+    #[clap(short, long, default_value_t = 0)]
     pub nonce: u64,
+
+    /// Hexadecimal string of contract's constructor arguments [default: ``]
+    #[clap(short, long, default_value_t = String::from(""))]
+    pub args: String,
 }

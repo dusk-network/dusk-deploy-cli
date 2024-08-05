@@ -6,6 +6,7 @@ use execution_core::transfer::Transaction;
 use rusk_http_client::{RuskHttpClient, RuskRequest};
 use rusk_prover::UnprovenTransaction;
 use std::fmt::Debug;
+use tracing::info;
 
 pub struct DCliProverClient {
     state: RuskHttpClient,
@@ -24,7 +25,7 @@ impl DCliProverClient {
         DCliProverClient {
             state,
             prover,
-            status: |a| println!("{}", a),
+            status: |a| info!("{}", a),
         }
     }
 

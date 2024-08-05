@@ -19,7 +19,7 @@ use std::sync::{Arc, RwLock};
 use tracing::info;
 use wallet::StateClient;
 
-pub const CONTRACT_ID_BYTES: usize = 32;
+const CONTRACT_ID_BYTES: usize = 32;
 
 #[inline]
 const fn reserved(b: u8) -> ContractId {
@@ -28,12 +28,11 @@ const fn reserved(b: u8) -> ContractId {
     bytes
 }
 
-/// ID of the genesis transfer contract
-pub const TRANSFER_CONTRACT: ContractId = reserved(0x1);
+const TRANSFER_CONTRACT: ContractId = reserved(0x1);
 
-pub const POSEIDON_TREE_DEPTH: usize = 17; // todo
+const POSEIDON_TREE_DEPTH: usize = 17;
 
-pub const TRANSFER_CONTRACT_STR: &str =
+const TRANSFER_CONTRACT_STR: &str =
     "0100000000000000000000000000000000000000000000000000000000000000";
 
 const ITEM_LEN: usize = mem::size_of::<TreeLeaf>();
@@ -100,17 +99,14 @@ impl StateClient for DCliStateClient {
             "leaves_from_height",
         )
         .wait()?;
-        println!("obtained stream");
         StreamAux::find_items::<TreeLeaf, ITEM_LEN>(
             |leaf| {
                 if vk.owns(leaf.note.stealth_address()) {
-                    println!("owned note value={:?}", leaf.note.value(None));
                     response_notes.push((leaf.block_height, leaf.note.clone()))
                 }
             },
             &mut stream,
         )?;
-        println!("after find items, notes size={}", response_notes.len());
 
         for (block_height, note) in response_notes {
             // Filter out duplicated notes and update the last

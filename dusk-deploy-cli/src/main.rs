@@ -20,12 +20,10 @@ use crate::config::BlockchainAccessConfig;
 use crate::error::Error;
 use bip39::{Language, Mnemonic, Seed};
 use clap::Parser;
-use execution_core::transfer::ContractId;
-use rusk_http_client::{ContractInquirer, RuskHttpClient};
 use std::fs::File;
 use std::io::Read;
-use std::thread;
 use toml_base_config::BaseConfig;
+use tracing::info;
 
 use crate::deployer::Deployer;
 use crate::gen_id::gen_contract_id;
@@ -33,6 +31,11 @@ use crate::gen_id::gen_contract_id;
 #[tokio::main]
 #[allow(non_snake_case)]
 async fn main() -> Result<(), Error> {
+    let subscriber = tracing_subscriber::fmt::Subscriber::builder()
+        .with_writer(std::io::stderr)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).map_err(|_| Error::Tracing)?;
+
     let cli = Args::parse();
 
     let config_path = cli.config_path.as_path();
@@ -42,6 +45,7 @@ async fn main() -> Result<(), Error> {
     let contract_path = cli.contract_path.as_path();
     let owner = cli.owner;
     let nonce = cli.nonce;
+    let args = cli.args;
 
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
 
@@ -49,21 +53,15 @@ async fn main() -> Result<(), Error> {
     let mut bytecode = Vec::new();
     bytecode_file.read_to_end(&mut bytecode)?;
 
-    let constructor_args: Option<Vec<u8>> = Some(vec![38u8]);
+    let mut constructor_args: Option<Vec<u8>> = None;
+    if !args.is_empty() {
+        let v = hex::decode(args).expect("decoding constructore arguments should succeed");
+        constructor_args = Some(v);
+    }
 
     let wallet_index = 0;
 
-    // let seed_vec = hex::decode("7965013909185294fa0f0d2a2be850ee89389e45d17e0c7da9a7588901648086c5b3ac52d95b6fd421104b6a77ca21772f0a041f031c3c8039ae3b24c48467bd")
-    //     .expect("decoding seed should succeed");
-    // let mut seed = [0u8; 64];
-    // seed.copy_from_slice(seed_vec.as_slice());
-
-    let phrase = seed_phrase.to_string();
-    let mnemonic = Mnemonic::from_phrase(&phrase, Language::English)
-        .map_err(|_| Error::InvalidMnemonicPhrase)?;
-    let seed_obj = Seed::new(&mnemonic, "");
-    let mut seed = [0u8; 64];
-    seed.copy_from_slice(seed_obj.as_bytes());
+    let seed = seed_from_phrase(seed_phrase)?;
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
@@ -80,35 +78,22 @@ async fn main() -> Result<(), Error> {
         &seed,
     );
 
-    println!(
-        "deployment result for contract: {:?} is: {:?}",
+    info!(
+        "Deployment result for contract {:?} is: {:?}",
         contract_path, result
     );
     let deployed_id = gen_contract_id(bytecode, nonce, owner);
-    println!("deployed contract id: {}", hex::encode(&deployed_id));
-
-    verify_deployment(deployed_id, blockchain_access_config.rusk_address).await;
+    info!("Deployed contract id: {}", hex::encode(&deployed_id));
 
     Ok(())
 }
 
-async fn verify_deployment(contract_id: [u8; 32], rusk_url: impl AsRef<str>) {
-    const METHOD: &str = "value";
-    println!(
-        "verifying deployment by calling contract's method: {}",
-        METHOD
-    );
-
-    thread::sleep(std::time::Duration::from_secs(10));
-
-    let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
-    let r = ContractInquirer::query_contract::<(), u8>(
-        &client,
-        (),
-        ContractId::from(contract_id),
-        METHOD,
-    )
-    .await;
-
-    println!("result of calling the contract's method: {:?}", r);
+// converts seed phrase into a binary seed
+fn seed_from_phrase(phrase: impl AsRef<str>) -> Result<[u8; 64], Error> {
+    let mnemonic = Mnemonic::from_phrase(phrase.as_ref(), Language::English)
+        .map_err(|_| Error::InvalidMnemonicPhrase)?;
+    let seed_obj = Seed::new(&mnemonic, "");
+    let mut seed = [0u8; 64];
+    seed.copy_from_slice(seed_obj.as_bytes());
+    Ok(seed)
 }
