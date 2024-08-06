@@ -26,6 +26,7 @@ use std::fs::File;
 use std::io::Read;
 use std::thread;
 use toml_base_config::BaseConfig;
+use tracing::info;
 
 use crate::deployer::Deployer;
 use crate::gen_id::gen_contract_id;
@@ -33,6 +34,11 @@ use crate::gen_id::gen_contract_id;
 #[tokio::main]
 #[allow(non_snake_case)]
 async fn main() -> Result<(), Error> {
+    let subscriber = tracing_subscriber::fmt::Subscriber::builder()
+        .with_writer(std::io::stderr)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).map_err(|_| Error::Tracing)?;
+
     let cli = Args::parse();
 
     let config_path = cli.config_path.as_path();
@@ -81,12 +87,12 @@ async fn main() -> Result<(), Error> {
         &seed,
     );
 
-    println!(
-        "deployment result for contract: {:?} is: {:?}",
+    info!(
+        "Deployment result for contract {:?} is: {:?}",
         contract_path, result
     );
     let deployed_id = gen_contract_id(bytecode, nonce, owner);
-    println!("deployed contract id: {}", hex::encode(&deployed_id));
+    info!("Deployed contract id: {}", hex::encode(&deployed_id));
 
     if !method.is_empty() {
         verify_deployment(deployed_id, blockchain_access_config.rusk_address, method).await;

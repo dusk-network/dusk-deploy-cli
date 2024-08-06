@@ -21,7 +21,6 @@ impl Store for DCliStore {
     type Error = ();
 
     fn get_seed(&self) -> Result<[u8; 64], Self::Error> {
-        println!("seed={}", hex::encode(self.seed.clone()));
         Ok(self.seed.clone())
     }
 }
