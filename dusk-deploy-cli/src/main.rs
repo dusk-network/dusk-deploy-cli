@@ -87,10 +87,13 @@ async fn main() -> Result<(), Error> {
         &seed,
     );
 
-    info!(
-        "Deployment result for contract {:?} is: {:?}",
-        contract_path, result
-    );
+    match result {
+        Ok(_) => info!("Deployment successful"),
+        Err(ref err) => info!(
+            "Deployment result for contract {:?} is: {:?}",
+            contract_path, err
+        ),
+    }
 
     if result.is_ok() {
         let deployed_id = gen_contract_id(bytecode, nonce, owner);
