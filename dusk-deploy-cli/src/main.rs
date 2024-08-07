@@ -59,7 +59,7 @@ async fn main() -> Result<(), Error> {
 
     let mut constructor_args: Option<Vec<u8>> = None;
     if !args.is_empty() {
-        let v = hex::decode(args).expect("decoding constructore arguments should succeed");
+        let v = hex::decode(args).expect("decoding constructor arguments should succeed");
         constructor_args = Some(v);
     }
 
