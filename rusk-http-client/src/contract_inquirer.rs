@@ -4,6 +4,7 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
+use crate::bc_types::MAX_CALL_SIZE;
 use crate::block::BlockInPlace;
 use crate::error::Error;
 use crate::Error::InvalidQueryResponse;
@@ -13,8 +14,6 @@ use bytes::Bytes;
 use execution_core::transfer::ContractId;
 use rkyv::validation::validators::DefaultValidator;
 use rkyv::{check_archived_root, Archive, Deserialize, Infallible};
-
-pub const MAX_CALL_SIZE: usize = 65536;
 
 pub struct ContractInquirer {}
 

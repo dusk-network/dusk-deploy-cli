@@ -6,6 +6,7 @@
 
 use std::borrow::Cow;
 use std::io;
+use std::sync::Arc;
 
 /// Errors returned by this library
 #[derive(Debug, thiserror::Error)]
@@ -28,4 +29,16 @@ pub enum Error {
     /// Stream error
     #[error("Stream item not present or stream error: {0:?}")]
     Stream(Cow<'static, str>),
+    /// Not found error
+    #[error("Not found: {0:?}")]
+    NotFound(Cow<'static, str>),
+    /// Serde JSON errors
+    #[error(transparent)]
+    SerdeJson(Arc<serde_json::Error>),
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Error::SerdeJson(Arc::from(e))
+    }
 }

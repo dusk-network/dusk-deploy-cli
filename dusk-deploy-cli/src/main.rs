@@ -91,11 +91,14 @@ async fn main() -> Result<(), Error> {
         "Deployment result for contract {:?} is: {:?}",
         contract_path, result
     );
-    let deployed_id = gen_contract_id(bytecode, nonce, owner);
-    info!("Deployed contract id: {}", hex::encode(&deployed_id));
 
-    if !method.is_empty() {
-        verify_deployment(deployed_id, blockchain_access_config.rusk_address, method).await;
+    if result.is_ok() {
+        let deployed_id = gen_contract_id(bytecode, nonce, owner);
+        info!("Deployed contract id: {}", hex::encode(&deployed_id));
+
+        if !method.is_empty() {
+            verify_deployment(deployed_id, blockchain_access_config.rusk_address, method).await;
+        }
     }
 
     Ok(())
