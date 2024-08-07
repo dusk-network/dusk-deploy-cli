@@ -14,8 +14,7 @@ use thiserror::Error;
 #[derive(Error, Debug, Clone)]
 pub enum Error {
     /// Deploy
-    #[error("Deploy: {0:?}")]
-    #[allow(dead_code)]
+    #[error("{0}")]
     Deploy(Cow<'static, str>),
     /// IO
     #[error(transparent)]
@@ -33,10 +32,10 @@ pub enum Error {
     #[error("Serialization error occurred: {0:?}")]
     Serialization(Arc<dusk_bytes::Error>),
     /// Prover Errors
-    #[error("Prover error occurred: {0:?}")]
+    #[error("Prover error occurred: {0}")]
     Prover(Arc<rusk_prover::ProverError>),
     /// Wallet Errors
-    #[error("Wallet error occurred")]
+    #[error("Wallet error occurred: {0}")]
     Wallet(Arc<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>>),
     /// Seed phrase is not valid
     #[error("Invalid recovery phrase")]

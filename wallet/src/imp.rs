@@ -33,32 +33,43 @@ type SerializerError =
     CompositeSerializerError<Infallible, AllocScratchError, SharedSerializeMapError>;
 
 /// The error type returned by this crate.
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum Error<S: Store, SC: StateClient, PC: ProverClient> {
     /// Underlying store error.
+    #[error(transparent)]
     Store(S::Error),
     /// Error originating from the state client.
+    #[error(transparent)]
     State(SC::Error),
     /// Error originating from the prover client.
+    #[error(transparent)]
     Prover(PC::Error),
     /// Rkyv serialization.
+    #[error("Serialization error")]
     Rkyv,
     /// Random number generator error.
+    #[error(transparent)]
     Rng(RngError),
     /// Serialization and deserialization of Dusk types.
+    #[error("Bytes error")]
     Bytes(BytesError),
     /// Bytes were meant to be utf8 but aren't.
+    #[error(transparent)]
     Utf8(FromUtf8Error),
     /// Originating from the transaction model.
+    #[error("Phoenix error occurred: {0}")]
     Phoenix(PhoenixError),
     /// Not enough balance to perform transaction.
+    #[error("Not enough balance")]
     NotEnoughBalance,
     /// Note combination for the given value is impossible given the maximum
     /// amount if inputs in a transaction.
+    #[error("Note combination problem")]
     NoteCombinationProblem,
     /// The key is already staked. This happens when there already is an amount
     /// staked for a key and the user tries to make a stake transaction.
+    #[error("Already staked")]
     AlreadyStaked {
         /// The key that already has a stake.
         key: BlsPublicKey,
@@ -67,6 +78,7 @@ pub enum Error<S: Store, SC: StateClient, PC: ProverClient> {
     },
     /// The key is not staked. This happens when a key doesn't have an amount
     /// staked and the user tries to make an unstake transaction.
+    #[error("Not staked")]
     NotStaked {
         /// The key that is not staked.
         key: BlsPublicKey,
@@ -75,6 +87,7 @@ pub enum Error<S: Store, SC: StateClient, PC: ProverClient> {
     },
     /// The key has no reward. This happens when a key has no reward in the
     /// stake contract and the user tries to make a withdraw transaction.
+    #[error("No reward")]
     NoReward {
         /// The key that has no reward.
         key: BlsPublicKey,

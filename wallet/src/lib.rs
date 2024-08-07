@@ -35,7 +35,7 @@ pub const MAX_CALL_SIZE: usize = rusk_abi::ARGBUF_LEN;
 /// Stores the cryptographic material necessary to derive cryptographic keys.
 pub trait Store {
     /// The error type returned from the store.
-    type Error;
+    type Error: std::error::Error;
 
     /// Retrieves the seed used to derive keys.
     fn get_seed(&self) -> Result<[u8; 64], Self::Error>;
@@ -104,7 +104,7 @@ pub fn derive_stake_sk(seed: &[u8; 64], index: u64) -> BlsSecretKey {
 /// Types that are client of the prover.
 pub trait ProverClient {
     /// Error returned by the node client.
-    type Error;
+    type Error: std::error::Error;
 
     /// Requests that a node prove the given transaction and later propagates it
     fn compute_proof_and_propagate(
@@ -122,7 +122,7 @@ pub type EnrichedNote = (Note, BlockHeight);
 /// Types that are clients of the state API.
 pub trait StateClient {
     /// Error returned by the node client.
-    type Error;
+    type Error: std::error::Error;
 
     /// Find notes for a view key.
     fn fetch_notes(&self, vk: &ViewKey) -> Result<Vec<EnrichedNote>, Self::Error>;
