@@ -3,9 +3,11 @@ use crate::Error;
 use dusk_bytes::DeserializableSlice;
 use dusk_plonk::prelude::Proof;
 use execution_core::transfer::Transaction;
-use rusk_http_client::{RuskHttpClient, RuskRequest};
+use rusk_http_client::{RuskHttpClient, RuskRequest, TxInquirer};
 use rusk_prover::UnprovenTransaction;
+use std::borrow::Cow;
 use std::fmt::Debug;
+use std::thread;
 use tracing::info;
 
 pub struct DCliProverClient {
@@ -69,7 +71,21 @@ impl wallet::ProverClient for DCliProverClient {
         let _ = self.state.call(2, "Chain", &propagate_req).wait()?;
         self.status("Transaction propagated!");
 
-        Ok(tx.into())
+        let tx: Transaction = tx.into();
+        let tx_id = rusk_abi::hash(tx.to_hash_input_bytes());
+        let tx_id_str = hex::encode(tx_id.to_bytes());
+        info!("Transaction id = {}", tx_id_str);
+        for _ in 0..20 {
+            let r = TxInquirer::retrieve_tx_err(tx_id_str.clone(), &self.state).wait();
+            thread::sleep(std::time::Duration::from_secs(3));
+            if r.is_ok() {
+                return match r.unwrap() {
+                    Some(err) => Err(Error::Deploy(Cow::from(err))),
+                    None => Ok(tx),
+                };
+            }
+        }
+        Err(Error::Deploy("Transaction timed out".into()))
     }
 }
 

@@ -4,6 +4,7 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
+use crate::Error;
 use wallet::Store;
 
 #[derive(Debug, Clone)]
@@ -18,7 +19,7 @@ impl DCliStore {
 }
 
 impl Store for DCliStore {
-    type Error = ();
+    type Error = Error;
 
     fn get_seed(&self) -> Result<[u8; 64], Self::Error> {
         Ok(self.seed.clone())

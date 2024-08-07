@@ -8,6 +8,7 @@ wallet = { path = "../wallet" }
 rusk-http-client = { path = "../rusk-http-client" }
 execution-core = { path = "../../rusk/execution-core" }
 rusk-prover = { path = "../../rusk/rusk-prover" }
+rusk-abi = { version = "0.13.0-rc", path = "../../../rust/rusk/rusk-abi", default-features = false, features = ["host"] }
 tiny-bip39 = "0.8"
 dusk-bls12_381 = "0.12"
 dusk-plonk = "0.19"
