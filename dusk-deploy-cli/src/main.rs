@@ -29,6 +29,7 @@ use tracing::info;
 
 use crate::deployer::Deployer;
 use crate::gen_id::gen_contract_id;
+use crate::wallet_builder::WalletBuilder;
 
 #[tokio::main]
 #[allow(non_snake_case)]
@@ -73,14 +74,19 @@ async fn main() -> Result<(), Error> {
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
-    for i in 210..256 {
+    let wallet = WalletBuilder::build(
+        blockchain_access_config.rusk_address.clone(),
+        blockchain_access_config.clone().prover_address,
+        &seed,
+    )?;
+
+    for i in 231..256 {
         let mut v = Vec::new();
         v.push(i as u8);
         let constructor_args = Some(v);
 
         let result = Deployer::deploy(
-            blockchain_access_config.clone().rusk_address.clone(),
-            blockchain_access_config.clone().prover_address.clone(),
+            &wallet,
             &bytecode.clone(),
             &owner.clone(),
             constructor_args,
@@ -88,7 +94,6 @@ async fn main() -> Result<(), Error> {
             wallet_index,
             gas_limit,
             gas_price,
-            &seed,
         );
 
         match result {

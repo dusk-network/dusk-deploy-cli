@@ -4,12 +4,15 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
+use crate::dcli_prover_client::DCliProverClient;
+use crate::dcli_state_client::DCliStateClient;
+use crate::dcli_store::DCliStore;
 use execution_core::bytecode::Bytecode;
 use execution_core::transfer::{ContractDeploy, ContractExec};
 use rand::prelude::*;
 use rand::rngs::StdRng;
+use wallet::Wallet;
 
-use crate::wallet_builder::WalletBuilder;
 use crate::Error;
 
 fn bytecode_hash(bytecode: impl AsRef<[u8]>) -> [u8; 32] {
@@ -21,8 +24,7 @@ pub struct Deployer;
 
 impl Deployer {
     pub fn deploy(
-        rusk_url: impl AsRef<str>,
-        prover_url: impl AsRef<str>,
+        wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         bytecode: &Vec<u8>,
         owner: &Vec<u8>,
         constructor_args: Option<Vec<u8>>,
@@ -30,11 +32,9 @@ impl Deployer {
         wallet_index: u64,
         gas_limit: u64,
         gas_price: u64,
-        seed: &[u8; 64],
     ) -> Result<(), Error> {
         let mut rng = StdRng::seed_from_u64(0xcafe);
         let hash = bytecode_hash(bytecode.as_slice());
-        let wallet = WalletBuilder::build(rusk_url, prover_url, seed)?;
         wallet.phoenix_execute(
             &mut rng,
             ContractExec::Deploy(ContractDeploy {
