@@ -44,6 +44,10 @@ pub struct Args {
     #[clap(short, long, default_value_t = String::from(""))]
     pub args: String,
 
+    /// Starting block height for scanning notes [default: `0`]
+    #[clap(short, long, default_value_t = 0)]
+    pub block_height: u64,
+
     /// Method to call [default: ``]
     #[clap(short, long, default_value_t = String::from("value"))]
     pub method: String,

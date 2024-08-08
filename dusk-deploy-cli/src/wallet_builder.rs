@@ -18,13 +18,14 @@ impl WalletBuilder {
         url_state: impl AsRef<str>,
         url_prover: impl AsRef<str>,
         seed: &[u8; 64],
+        start_block_height: u64,
     ) -> Result<Wallet<DCliStore, DCliStateClient, DCliProverClient>, Error> {
         let state_client = RuskHttpClient::new(url_state.as_ref().to_string());
         let prover_client = RuskHttpClient::new(url_prover.as_ref().to_string());
 
         Ok(wallet::Wallet::new(
             DCliStore::new(seed),
-            DCliStateClient::new(state_client.clone()),
+            DCliStateClient::new(state_client.clone(), start_block_height),
             DCliProverClient::new(state_client.clone(), prover_client.clone()),
         ))
     }

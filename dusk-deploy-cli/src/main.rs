@@ -49,6 +49,7 @@ async fn main() -> Result<(), Error> {
     let owner = cli.owner;
     let nonce = cli.nonce;
     let _args = cli.args;
+    let start_block_height = cli.block_height;
     let method = cli.method;
 
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
@@ -78,9 +79,10 @@ async fn main() -> Result<(), Error> {
         blockchain_access_config.rusk_address.clone(),
         blockchain_access_config.clone().prover_address,
         &seed,
+        start_block_height,
     )?;
 
-    for i in 256..512 {
+    for i in 683..768 {
         let mut v = Vec::new();
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
