@@ -27,6 +27,7 @@ use tracing::info;
 
 use crate::deployer::Deployer;
 use crate::gen_id::gen_contract_id;
+use crate::wallet_builder::WalletBuilder;
 
 #[tokio::main]
 #[allow(non_snake_case)]
@@ -65,9 +66,14 @@ async fn main() -> Result<(), Error> {
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
-    let result = Deployer::deploy(
+    let wallet = WalletBuilder::build(
         blockchain_access_config.rusk_address.clone(),
-        blockchain_access_config.prover_address,
+        blockchain_access_config.clone().prover_address,
+        &seed,
+    )?;
+
+    let result = Deployer::deploy(
+        &wallet,
         &bytecode,
         &owner,
         constructor_args,
@@ -75,7 +81,6 @@ async fn main() -> Result<(), Error> {
         wallet_index,
         gas_limit,
         gas_price,
-        &seed,
     );
 
     match result {
