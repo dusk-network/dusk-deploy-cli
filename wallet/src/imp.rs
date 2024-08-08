@@ -14,7 +14,6 @@ use alloc::vec::Vec;
 use dusk_bytes::Error as BytesError;
 use execution_core::transfer::AccountData;
 use execution_core::{
-    stake::StakeData,
     transfer::{ContractCall, ContractDeploy, ContractExec, Fee, PhoenixPayload, Transaction},
     BlsPublicKey, BlsScalar, JubJubScalar, Note, PhoenixError, PublicKey, SchnorrSecretKey,
     SecretKey, TxSkeleton, ViewKey, OUTPUT_NOTES,
@@ -67,33 +66,6 @@ pub enum Error<S: Store, SC: StateClient, PC: ProverClient> {
     /// amount if inputs in a transaction.
     #[error("Note combination problem")]
     NoteCombinationProblem,
-    /// The key is already staked. This happens when there already is an amount
-    /// staked for a key and the user tries to make a stake transaction.
-    #[error("Already staked")]
-    AlreadyStaked {
-        /// The key that already has a stake.
-        key: BlsPublicKey,
-        /// Information about the key's stake.
-        stake: StakeData,
-    },
-    /// The key is not staked. This happens when a key doesn't have an amount
-    /// staked and the user tries to make an unstake transaction.
-    #[error("Not staked")]
-    NotStaked {
-        /// The key that is not staked.
-        key: BlsPublicKey,
-        /// Information about the key's stake.
-        stake: StakeData,
-    },
-    /// The key has no reward. This happens when a key has no reward in the
-    /// stake contract and the user tries to make a withdraw transaction.
-    #[error("No reward")]
-    NoReward {
-        /// The key that has no reward.
-        key: BlsPublicKey,
-        /// Information about the key's stake.
-        stake: StakeData,
-    },
 }
 
 impl<S: Store, SC: StateClient, PC: ProverClient> Error<S, SC, PC> {

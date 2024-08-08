@@ -6,9 +6,8 @@ edition = "2021"
 [dependencies]
 wallet = { path = "../wallet" }
 rusk-http-client = { path = "../rusk-http-client" }
-execution-core = { path = "../../rusk/execution-core" }
-rusk-prover = { path = "../../rusk/rusk-prover" }
-rusk-abi = { version = "0.13.0-rc", path = "../../../rust/rusk/rusk-abi", default-features = false, features = ["host"] }
+execution-core = { version = "0.1.0", path = "../../rusk/execution-core" }
+rusk-prover = { version = "0.3.0", path = "../../rusk/rusk-prover" }
 tiny-bip39 = "0.8"
 dusk-bls12_381 = "0.12"
 dusk-plonk = "0.19"

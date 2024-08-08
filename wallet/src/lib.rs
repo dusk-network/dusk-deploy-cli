@@ -30,7 +30,7 @@ pub use imp::*;
 pub use rusk_prover::UnprovenTransaction;
 
 /// The maximum size of call data.
-pub const MAX_CALL_SIZE: usize = rusk_abi::ARGBUF_LEN;
+pub const MAX_CALL_SIZE: usize = 65536;
 
 /// Stores the cryptographic material necessary to derive cryptographic keys.
 pub trait Store {
