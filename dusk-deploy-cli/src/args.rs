@@ -43,4 +43,8 @@ pub struct Args {
     /// Hexadecimal string of contract's constructor arguments [default: ``]
     #[clap(short, long, default_value_t = String::from(""))]
     pub args: String,
+
+    /// Starting block height for scanning notes [default: `0`]
+    #[clap(short, long, default_value_t = 0)]
+    pub block_height: u64,
 }

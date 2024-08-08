@@ -47,6 +47,7 @@ async fn main() -> Result<(), Error> {
     let owner = cli.owner;
     let nonce = cli.nonce;
     let args = cli.args;
+    let start_block_height = cli.block_height;
 
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
 
@@ -70,6 +71,7 @@ async fn main() -> Result<(), Error> {
         blockchain_access_config.rusk_address.clone(),
         blockchain_access_config.clone().prover_address,
         &seed,
+        start_block_height,
     )?;
 
     let result = Deployer::deploy(

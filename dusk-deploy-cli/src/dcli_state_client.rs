@@ -4,6 +4,7 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
+use std::cmp::max;
 use crate::block::Block;
 use crate::Error;
 use dusk_bytes::Serializable;
@@ -40,6 +41,7 @@ const ITEM_LEN: usize = mem::size_of::<TreeLeaf>();
 pub struct DCliStateClient {
     pub client: RuskHttpClient,
     pub cache: Arc<RwLock<HashMap<Vec<u8>, DummyCacheItem>>>,
+    pub start_block_height: u64,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -62,11 +64,12 @@ pub type BlockHeight = u64;
 pub type EnrichedNote = (Note, BlockHeight);
 
 impl DCliStateClient {
-    pub fn new(rusk_http_client: RuskHttpClient) -> Self {
+    pub fn new(rusk_http_client: RuskHttpClient, start_block_height: u64) -> Self {
         let cache = Arc::new(std::sync::RwLock::new(std::collections::HashMap::new()));
         Self {
             client: rusk_http_client,
             cache,
+            start_block_height,
         }
     }
 }
@@ -90,11 +93,12 @@ impl StateClient for DCliStateClient {
             DummyCacheItem::default()
         };
 
-        info!("Requesting notes from height {}", vk_cache.last_height);
+        let start_height = max(self.start_block_height, vk_cache.last_height);
+        info!("Requesting notes from height {}", start_height);
         let mut response_notes = Vec::new();
         let mut stream = ContractInquirer::query_contract_with_feeder(
             &self.client,
-            vk_cache.last_height,
+            start_height,
             TRANSFER_CONTRACT,
             "leaves_from_height",
         )
