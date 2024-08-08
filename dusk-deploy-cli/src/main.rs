@@ -80,9 +80,9 @@ async fn main() -> Result<(), Error> {
         &seed,
     )?;
 
-    for i in 231..256 {
+    for i in 256..512 {
         let mut v = Vec::new();
-        v.push(i as u8);
+        v.push((i % 256) as u8);
         let constructor_args = Some(v);
 
         let result = Deployer::deploy(
