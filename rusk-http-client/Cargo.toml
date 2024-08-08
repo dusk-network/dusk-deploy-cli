@@ -12,7 +12,6 @@ bytes = "1.4"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = { version = "0.3.28", default-features = false, features = ["sink", "std"] }
-execution-core = { path = "../../../rust/rusk/execution-core" }
 tokio = { version = "1.21", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 hex = "0.4"

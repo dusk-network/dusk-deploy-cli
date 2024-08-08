@@ -11,9 +11,10 @@ use crate::Error::InvalidQueryResponse;
 use crate::{RuskHttpClient, RuskRequest};
 use bytecheck::CheckBytes;
 use bytes::Bytes;
-use execution_core::transfer::ContractId;
 use rkyv::validation::validators::DefaultValidator;
 use rkyv::{check_archived_root, Archive, Deserialize, Infallible};
+
+pub type ContractId = [u8; 32];
 
 pub struct ContractInquirer {}
 

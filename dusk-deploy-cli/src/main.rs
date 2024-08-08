@@ -24,7 +24,6 @@ use execution_core::transfer::ContractId;
 use rusk_http_client::{ContractInquirer, RuskHttpClient};
 use std::fs::File;
 use std::io::Read;
-use std::thread;
 use toml_base_config::BaseConfig;
 use tracing::info;
 
@@ -48,7 +47,7 @@ async fn main() -> Result<(), Error> {
     let contract_path = cli.contract_path.as_path();
     let owner = cli.owner;
     let nonce = cli.nonce;
-    let args = cli.args;
+    let _args = cli.args;
     let method = cli.method;
 
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
@@ -57,11 +56,11 @@ async fn main() -> Result<(), Error> {
     let mut bytecode = Vec::new();
     bytecode_file.read_to_end(&mut bytecode)?;
 
-    let mut constructor_args: Option<Vec<u8>> = None;
-    if !args.is_empty() {
-        let v = hex::decode(args).expect("decoding constructor arguments should succeed");
-        constructor_args = Some(v);
-    }
+    // let mut constructor_args: Option<Vec<u8>> = None;
+    // if !args.is_empty() {
+    //     let v = hex::decode(args).expect("decoding constructor arguments should succeed");
+    //     constructor_args = Some(v);
+    // }
 
     let wallet_index = 0;
 
@@ -74,30 +73,43 @@ async fn main() -> Result<(), Error> {
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
-    let result = Deployer::deploy(
-        blockchain_access_config.rusk_address.clone(),
-        blockchain_access_config.prover_address,
-        &bytecode,
-        &owner,
-        constructor_args,
-        nonce,
-        wallet_index,
-        gas_limit,
-        gas_price,
-        &seed,
-    );
+    for i in 210..256 {
+        let mut v = Vec::new();
+        v.push(i as u8);
+        let constructor_args = Some(v);
 
-    match result {
-        Ok(_) => info!("Deployment successful"),
-        Err(ref err) => info!("{} for {:?}", err, contract_path),
-    }
+        let result = Deployer::deploy(
+            blockchain_access_config.clone().rusk_address.clone(),
+            blockchain_access_config.clone().prover_address.clone(),
+            &bytecode.clone(),
+            &owner.clone(),
+            constructor_args,
+            nonce + i,
+            wallet_index,
+            gas_limit,
+            gas_price,
+            &seed,
+        );
 
-    if result.is_ok() {
-        let deployed_id = gen_contract_id(bytecode, nonce, owner);
-        info!("Deployed contract id: {}", hex::encode(&deployed_id));
+        match result {
+            Ok(_) => info!("Deployment successful {}", i),
+            Err(ref err) => info!("{} for {:?}", err, contract_path),
+        }
 
-        if !method.is_empty() {
-            verify_deployment(deployed_id, blockchain_access_config.rusk_address, method).await;
+        if result.is_ok() {
+            let deployed_id = gen_contract_id(bytecode.clone(), nonce + i, owner.clone());
+            info!("Deployed contract id: {}", hex::encode(&deployed_id));
+
+            if !method.clone().is_empty() {
+                verify_deployment(
+                    deployed_id,
+                    blockchain_access_config.rusk_address.clone(),
+                    method.clone(),
+                )
+                .await;
+            }
+        } else {
+            break;
         }
     }
 
@@ -114,10 +126,8 @@ async fn verify_deployment(
         method.as_ref(),
     );
 
-    thread::sleep(std::time::Duration::from_secs(10));
-
     let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
-    let r = ContractInquirer::query_contract::<(), ()>(
+    let r = ContractInquirer::query_contract::<(), u8>(
         &client,
         (),
         ContractId::from(contract_id),

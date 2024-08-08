@@ -20,7 +20,6 @@ hex = "0.4"
 thiserror = "1.0"
 
 # rusk dependencies
-rusk-abi = { version = "0.13.0-rc", path = "../../../rust/rusk/rusk-abi", default-features = false }
 execution-core = { version = "0.1.0", path = "../../../rust/rusk/execution-core" }
 
 [dev-dependencies]
