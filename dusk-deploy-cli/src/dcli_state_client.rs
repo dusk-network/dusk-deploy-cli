@@ -4,7 +4,6 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use std::cmp::max;
 use crate::block::Block;
 use crate::Error;
 use dusk_bytes::Serializable;
@@ -13,6 +12,7 @@ use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
 use poseidon_merkle::Opening as PoseidonOpening;
 use rusk_http_client::RuskHttpClient;
 use rusk_http_client::{ContractInquirer, StreamAux};
+use std::cmp::max;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::mem;

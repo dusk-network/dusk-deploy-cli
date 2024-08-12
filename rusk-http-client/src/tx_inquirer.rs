@@ -4,12 +4,13 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use crate::{Error, RuskHttpClient, RuskRequest, SpentTxResponse};
+use crate::{Error, QueryResult, RuskHttpClient, RuskRequest, SpentTxResponse};
 use std::borrow::Cow;
 
 pub struct TxInquirer;
 
 impl TxInquirer {
+    // todo: rename as it is not only tx inquirer, but general blockchain inquirer as well
     pub async fn retrieve_tx_err<S>(
         txid: S,
         client: &RuskHttpClient,
@@ -24,6 +25,13 @@ impl TxInquirer {
             Some(tx) => Ok(tx.err),
             None => Err(Error::NotFound(Cow::from(txid.as_ref().to_string()))),
         }
+    }
+
+    pub async fn block_height(client: &RuskHttpClient) -> Result<u64, Error> {
+        let query = "query { block(height: -1) {header { height}} }";
+        let response = Self::gql_query(client, query).await?;
+        let result = serde_json::from_slice::<QueryResult>(&response)?;
+        Ok(result.block.header.height)
     }
 
     pub async fn gql_query(

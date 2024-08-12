@@ -16,10 +16,13 @@ mod gen_id;
 mod wallet_builder;
 
 use crate::args::Args;
+use crate::block::Block;
 use crate::config::BlockchainAccessConfig;
 use crate::error::Error;
 use bip39::{Language, Mnemonic, Seed};
 use clap::Parser;
+use rusk_http_client::{RuskHttpClient, TxInquirer};
+use std::cmp::min;
 use std::fs::File;
 use std::io::Read;
 use toml_base_config::BaseConfig;
@@ -47,7 +50,8 @@ async fn main() -> Result<(), Error> {
     let owner = cli.owner;
     let nonce = cli.nonce;
     let args = cli.args;
-    let start_block_height = cli.block_height;
+    let mut start_bh = cli.block_height;
+    let rel_bh = cli.relative_height;
 
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
 
@@ -67,11 +71,18 @@ async fn main() -> Result<(), Error> {
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
+    if rel_bh != 0 {
+        let client = RuskHttpClient::new(blockchain_access_config.rusk_address.clone());
+        if let Ok(cur_bh) = TxInquirer::block_height(&client).wait() {
+            start_bh = cur_bh - min(cur_bh, rel_bh);
+        }
+    }
+
     let wallet = WalletBuilder::build(
         blockchain_access_config.rusk_address.clone(),
         blockchain_access_config.clone().prover_address,
         &seed,
-        start_block_height,
+        start_bh,
     )?;
 
     let result = Deployer::deploy(
