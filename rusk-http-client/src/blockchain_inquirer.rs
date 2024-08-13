@@ -7,10 +7,9 @@
 use crate::{Error, QueryResult, RuskHttpClient, RuskRequest, SpentTxResponse};
 use std::borrow::Cow;
 
-pub struct TxInquirer;
+pub struct BlockchainInquirer;
 
-impl TxInquirer {
-    // todo: rename as it is not only tx inquirer, but general blockchain inquirer as well
+impl BlockchainInquirer {
     pub async fn retrieve_tx_err<S>(
         txid: S,
         client: &RuskHttpClient,

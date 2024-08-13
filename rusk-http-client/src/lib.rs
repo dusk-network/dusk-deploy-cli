@@ -6,16 +6,16 @@
 
 mod bc_types;
 mod block;
+mod blockchain_inquirer;
 mod client;
 mod contract_inquirer;
 mod error;
 mod stream_aux;
-mod tx_inquirer;
 
 pub use bc_types::*;
 pub use block::*;
+pub use blockchain_inquirer::*;
 pub use client::*;
 pub use contract_inquirer::*;
 pub use error::*;
 pub use stream_aux::*;
-pub use tx_inquirer::*;
