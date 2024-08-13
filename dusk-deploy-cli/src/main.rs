@@ -10,8 +10,8 @@ mod config;
 mod dcli_prover_client;
 mod dcli_state_client;
 mod dcli_store;
-mod deployer;
 mod error;
+mod executor;
 mod gen_id;
 mod wallet_builder;
 
@@ -21,14 +21,14 @@ use crate::config::BlockchainAccessConfig;
 use crate::error::Error;
 use bip39::{Language, Mnemonic, Seed};
 use clap::Parser;
-use rusk_http_client::{RuskHttpClient, BlockchainInquirer};
+use rusk_http_client::{BlockchainInquirer, RuskHttpClient};
 use std::cmp::min;
 use std::fs::File;
 use std::io::Read;
 use toml_base_config::BaseConfig;
 use tracing::info;
 
-use crate::deployer::Deployer;
+use crate::executor::Executor;
 use crate::gen_id::gen_contract_id;
 use crate::wallet_builder::WalletBuilder;
 
@@ -85,7 +85,7 @@ async fn main() -> Result<(), Error> {
         start_bh,
     )?;
 
-    let result = Deployer::deploy(
+    let result = Executor::deploy(
         &wallet,
         &bytecode,
         &owner,
