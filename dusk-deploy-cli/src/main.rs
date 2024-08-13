@@ -10,14 +10,17 @@ mod config;
 mod dcli_prover_client;
 mod dcli_state_client;
 mod dcli_store;
-mod deployer;
 mod error;
+mod executor;
 mod gen_id;
 mod wallet_builder;
 
 use crate::args::Args;
 use crate::block::Block;
 use crate::config::BlockchainAccessConfig;
+use crate::dcli_prover_client::DCliProverClient;
+use crate::dcli_state_client::DCliStateClient;
+use crate::dcli_store::DCliStore;
 use crate::error::Error;
 use bip39::{Language, Mnemonic, Seed};
 use clap::Parser;
@@ -25,10 +28,12 @@ use rusk_http_client::{BlockchainInquirer, ContractId, ContractInquirer, RuskHtt
 use std::cmp::min;
 use std::fs::File;
 use std::io::Read;
+use std::thread;
 use toml_base_config::BaseConfig;
 use tracing::info;
+use wallet::Wallet;
 
-use crate::deployer::Deployer;
+use crate::executor::Executor;
 use crate::gen_id::gen_contract_id;
 use crate::wallet_builder::WalletBuilder;
 
@@ -91,42 +96,49 @@ async fn main() -> Result<(), Error> {
         start_bh,
     )?;
 
-    for i in 1026..1027 {
+    for i in 700..1029 {
         let mut v = Vec::new();
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
 
-        let result = Deployer::deploy(
-            &wallet,
-            &bytecode.clone(),
-            &owner.clone(),
-            constructor_args,
-            nonce + i,
-            wallet_index,
-            gas_limit,
-            gas_price,
-        );
+        // let result = Executor::deploy(
+        //     &wallet,
+        //     &bytecode.clone(),
+        //     &owner.clone(),
+        //     constructor_args,
+        //     nonce + i,
+        //     wallet_index,
+        //     gas_limit,
+        //     gas_price,
+        // );
+        //
+        // match result {
+        //     Ok(_) => info!("Deployment successful {}", i),
+        //     Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
+        // }
 
-        match result {
-            Ok(_) => info!("Deployment successful {}", i),
-            Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
+        // if result.is_ok() {
+        let deployed_id = gen_contract_id(bytecode.clone(), nonce + i, owner.clone());
+        // info!("Deployed contract id: {}", hex::encode(&deployed_id));
+
+        println!("verification {}", i);
+        thread::sleep(std::time::Duration::from_secs(15));
+
+        if !method.clone().is_empty() {
+            verify_deployment(
+                &wallet,
+                deployed_id,
+                blockchain_access_config.rusk_address.clone(),
+                method.clone(),
+                wallet_index,
+                gas_limit,
+                gas_price,
+            )
+            .await;
         }
-
-        if result.is_ok() {
-            let deployed_id = gen_contract_id(bytecode.clone(), nonce + i, owner.clone());
-            info!("Deployed contract id: {}", hex::encode(&deployed_id));
-
-            if !method.clone().is_empty() {
-                verify_deployment(
-                    deployed_id,
-                    blockchain_access_config.rusk_address.clone(),
-                    method.clone(),
-                )
-                .await;
-            }
-        } else {
-            break;
-        }
+        // } else {
+        //     break;
+        // }
     }
 
     Ok(())
@@ -144,13 +156,28 @@ fn seed_from_phrase(phrase: impl AsRef<str>) -> Result<[u8; 64], Error> {
 }
 
 async fn verify_deployment(
+    wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
     contract_id: [u8; 32],
     rusk_url: impl AsRef<str>,
     method: impl AsRef<str>,
+    wallet_index: u64,
+    gas_limit: u64,
+    gas_price: u64,
 ) {
+    let random_arg = contract_id[0];
     println!(
-        "verifying deployment by calling contract's method: {}",
-        method.as_ref(),
+        "verifying deployment by calling init({}) and value",
+        random_arg
+    );
+    let method_args = vec![random_arg];
+    let r = Executor::call_method(
+        &wallet,
+        &ContractId::from(contract_id),
+        "init",
+        method_args,
+        wallet_index,
+        gas_limit,
+        gas_price,
     );
 
     let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
@@ -162,5 +189,7 @@ async fn verify_deployment(
     )
     .await;
 
-    println!("result of calling the contract's method: {:x?}", r);
+    println!("result of calling value: {:?}", r);
+
+    assert_eq!(r.unwrap(), random_arg);
 }
