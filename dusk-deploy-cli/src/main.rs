@@ -98,7 +98,7 @@ async fn main() -> Result<(), Error> {
 
     match result {
         Ok(_) => info!("Deployment successful"),
-        Err(ref err) => info!("{} for {:?}", err, contract_path),
+        Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
     }
 
     if result.is_ok() {
