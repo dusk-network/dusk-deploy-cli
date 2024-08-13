@@ -4,12 +4,13 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use crate::{BalanceInfo, ProverClient, StateClient, Store};
+use crate::{BalanceInfo, ProverClient, StateClient, Store, MAX_CALL_SIZE};
 
 use core::convert::Infallible;
 
 use alloc::string::FromUtf8Error;
 use alloc::vec::Vec;
+use std::mem;
 
 use dusk_bytes::Error as BytesError;
 use execution_core::transfer::AccountData;
@@ -182,16 +183,21 @@ where
     /// Fetches the notes and nullifiers in the state and returns the notes that
     /// are still available for spending.
     fn unspent_notes(&self, sk: &SecretKey) -> Result<Vec<Note>, Error<S, SC, PC>> {
+        const CHUNK_SIZE: usize = MAX_CALL_SIZE / (8 * mem::size_of::<BlsScalar>());
         let vk = ViewKey::from(sk);
 
         let notes = self.state.fetch_notes(&vk).map_err(Error::from_state_err)?;
 
         let nullifiers: Vec<_> = notes.iter().map(|(n, _)| n.gen_nullifier(sk)).collect();
 
-        let existing_nullifiers = self
-            .state
-            .fetch_existing_nullifiers(&nullifiers)
-            .map_err(Error::from_state_err)?;
+        let mut existing_nullifiers: Vec<BlsScalar> = vec![];
+        for chunk in nullifiers.chunks(CHUNK_SIZE) {
+            existing_nullifiers.extend(
+                self.state
+                    .fetch_existing_nullifiers(chunk)
+                    .map_err(Error::from_state_err)?,
+            );
+        }
 
         let unspent_notes = notes
             .into_iter()

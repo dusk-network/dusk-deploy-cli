@@ -16,12 +16,13 @@ mod gen_id;
 mod wallet_builder;
 
 use crate::args::Args;
+use crate::block::Block;
 use crate::config::BlockchainAccessConfig;
 use crate::error::Error;
 use bip39::{Language, Mnemonic, Seed};
 use clap::Parser;
-use execution_core::transfer::ContractId;
-use rusk_http_client::{ContractInquirer, RuskHttpClient};
+use rusk_http_client::{ContractId, ContractInquirer, RuskHttpClient, TxInquirer};
+use std::cmp::min;
 use std::fs::File;
 use std::io::Read;
 use toml_base_config::BaseConfig;
@@ -48,8 +49,9 @@ async fn main() -> Result<(), Error> {
     let contract_path = cli.contract_path.as_path();
     let owner = cli.owner;
     let nonce = cli.nonce;
-    let _args = cli.args;
-    let start_block_height = cli.block_height;
+    let args = cli.args;
+    let mut start_bh = cli.block_height;
+    let rel_bh = cli.relative_height;
     let method = cli.method;
 
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
@@ -58,11 +60,11 @@ async fn main() -> Result<(), Error> {
     let mut bytecode = Vec::new();
     bytecode_file.read_to_end(&mut bytecode)?;
 
-    // let mut constructor_args: Option<Vec<u8>> = None;
-    // if !args.is_empty() {
-    //     let v = hex::decode(args).expect("decoding constructor arguments should succeed");
-    //     constructor_args = Some(v);
-    // }
+    let mut _constructor_args: Option<Vec<u8>> = None;
+    if !args.is_empty() {
+        let v = hex::decode(args).expect("decoding constructore arguments should succeed");
+        _constructor_args = Some(v);
+    }
 
     let wallet_index = 0;
 
@@ -75,14 +77,21 @@ async fn main() -> Result<(), Error> {
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
+    if rel_bh != 0 {
+        let client = RuskHttpClient::new(blockchain_access_config.rusk_address.clone());
+        if let Ok(cur_bh) = TxInquirer::block_height(&client).wait() {
+            start_bh = cur_bh - min(cur_bh, rel_bh);
+        }
+    }
+
     let wallet = WalletBuilder::build(
         blockchain_access_config.rusk_address.clone(),
         blockchain_access_config.clone().prover_address,
         &seed,
-        start_block_height,
+        start_bh,
     )?;
 
-    for i in 683..768 {
+    for i in 1025..1026 {
         let mut v = Vec::new();
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
@@ -100,7 +109,7 @@ async fn main() -> Result<(), Error> {
 
         match result {
             Ok(_) => info!("Deployment successful {}", i),
-            Err(ref err) => info!("{} for {:?}", err, contract_path),
+            Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
         }
 
         if result.is_ok() {
@@ -121,6 +130,17 @@ async fn main() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+// converts seed phrase into a binary seed
+#[allow(dead_code)]
+fn seed_from_phrase(phrase: impl AsRef<str>) -> Result<[u8; 64], Error> {
+    let mnemonic = Mnemonic::from_phrase(phrase.as_ref(), Language::English)
+        .map_err(|_| Error::InvalidMnemonicPhrase)?;
+    let seed_obj = Seed::new(&mnemonic, "");
+    let mut seed = [0u8; 64];
+    seed.copy_from_slice(seed_obj.as_bytes());
+    Ok(seed)
 }
 
 async fn verify_deployment(

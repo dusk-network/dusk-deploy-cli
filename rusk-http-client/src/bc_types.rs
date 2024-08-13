@@ -21,3 +21,18 @@ pub struct SpentTx {
 pub struct SpentTxResponse {
     pub tx: Option<SpentTx>,
 }
+
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct Header {
+    pub height: u64,
+}
+
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct Block {
+    pub header: Header,
+}
+
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct QueryResult {
+    pub block: Block,
+}

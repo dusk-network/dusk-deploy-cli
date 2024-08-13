@@ -43,6 +43,10 @@ ARGUMENTS:
                             it may take a long time to scan the entire blockchain, so in order to limit the waiting 
                             time, user can enter a height from which the scan is to be started. The user needs to
                             know, at least approximately, above which height her unspent notes are located.
+    -r, --relative_height   Optional relative starting block height. Scanning the blockchain for notes will start 
+                            from current height minus this value. If omitted or current block height cannot be
+                            obtained, absolute starting block height is assumed. This option, if present, overrides 
+                            the absolute block height.
 
 ```
 
