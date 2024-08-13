@@ -3,7 +3,7 @@ use crate::Error;
 use dusk_bytes::DeserializableSlice;
 use dusk_plonk::prelude::Proof;
 use execution_core::{transfer::Transaction, BlsScalar};
-use rusk_http_client::{RuskHttpClient, RuskRequest, TxInquirer};
+use rusk_http_client::{RuskHttpClient, RuskRequest, BlockchainInquirer};
 use rusk_prover::UnprovenTransaction;
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -76,7 +76,7 @@ impl wallet::ProverClient for DCliProverClient {
         let tx_id_str = hex::encode(tx_id.to_bytes());
         info!("Transaction id = {}", tx_id_str);
         for _ in 0..20 {
-            let r = TxInquirer::retrieve_tx_err(tx_id_str.clone(), &self.state).wait();
+            let r = BlockchainInquirer::retrieve_tx_err(tx_id_str.clone(), &self.state).wait();
             if r.is_ok() {
                 return match r.unwrap() {
                     Some(err) => Err(Error::Deploy(Cow::from(err))),

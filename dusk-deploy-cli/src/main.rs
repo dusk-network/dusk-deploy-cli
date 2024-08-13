@@ -21,7 +21,7 @@ use crate::config::BlockchainAccessConfig;
 use crate::error::Error;
 use bip39::{Language, Mnemonic, Seed};
 use clap::Parser;
-use rusk_http_client::{RuskHttpClient, TxInquirer};
+use rusk_http_client::{RuskHttpClient, BlockchainInquirer};
 use std::cmp::min;
 use std::fs::File;
 use std::io::Read;
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Error> {
 
     if rel_bh != 0 {
         let client = RuskHttpClient::new(blockchain_access_config.rusk_address.clone());
-        if let Ok(cur_bh) = TxInquirer::block_height(&client).wait() {
+        if let Ok(cur_bh) = BlockchainInquirer::block_height(&client).wait() {
             start_bh = cur_bh - min(cur_bh, rel_bh);
         }
     }
