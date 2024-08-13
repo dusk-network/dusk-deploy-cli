@@ -2,7 +2,8 @@ use crate::block::Block;
 use crate::Error;
 use dusk_bytes::DeserializableSlice;
 use dusk_plonk::prelude::Proof;
-use execution_core::{transfer::Transaction, BlsScalar};
+use execution_core::transfer::MoonlightTransaction;
+use execution_core::{transfer::Transaction, BlsPublicKey, BlsScalar};
 use rusk_http_client::{BlockchainInquirer, RuskHttpClient, RuskRequest};
 use rusk_prover::UnprovenTransaction;
 use std::borrow::Cow;
@@ -85,7 +86,41 @@ impl wallet::ProverClient for DCliProverClient {
             }
             thread::sleep(std::time::Duration::from_secs(3));
         }
-        Err(Error::Deploy("Transaction timed out".into()))
+        Err(Error::Propagate("Transaction timed out".into()))
+    }
+
+    fn propagate_moonlight_transaction(
+        &self,
+        tx: &MoonlightTransaction,
+    ) -> Result<Transaction, Self::Error> {
+        let tx = Transaction::Moonlight(tx.clone());
+        let tx_bytes = tx.to_var_bytes();
+
+        self.status("Attempt to preverify tx...");
+        let preverify_req = RuskRequest::new("preverify", tx_bytes.clone());
+        let _ = self.state.call(2, "rusk", &preverify_req).wait()?;
+        self.status("Preverify success!");
+
+        self.status("Propagating tx...");
+        let propagate_req = RuskRequest::new("propagate_tx", tx_bytes);
+        let _ = self.state.call(2, "Chain", &propagate_req).wait()?;
+        self.status("Transaction propagated!");
+
+        let tx: Transaction = tx.into();
+        let tx_id = BlsScalar::hash_to_scalar(tx.to_hash_input_bytes().as_slice());
+        let tx_id_str = hex::encode(tx_id.to_bytes());
+        info!("Transaction id = {}", tx_id_str);
+        for _ in 0..20 {
+            let r = BlockchainInquirer::retrieve_tx_err(tx_id_str.clone(), &self.state).wait();
+            if r.is_ok() {
+                return match r.unwrap() {
+                    Some(err) => Err(Error::Deploy(Cow::from(err))),
+                    None => Ok(tx),
+                };
+            }
+            thread::sleep(std::time::Duration::from_secs(3));
+        }
+        Err(Error::Propagate("Transaction timed out".into()))
     }
 }
 

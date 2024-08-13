@@ -16,6 +16,9 @@ pub enum Error {
     /// Deploy
     #[error("{0}")]
     Deploy(Cow<'static, str>),
+    /// Propagate
+    #[error("{0}")]
+    Propagate(Cow<'static, str>),
     /// IO
     #[error(transparent)]
     IO(Arc<std::io::Error>),

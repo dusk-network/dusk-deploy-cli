@@ -16,7 +16,7 @@ mod imp;
 
 use alloc::vec::Vec;
 use dusk_bytes::{DeserializableSlice, Serializable, Write};
-use execution_core::transfer::AccountData;
+use execution_core::transfer::{AccountData, MoonlightTransaction};
 use execution_core::{
     transfer::{Transaction, TRANSFER_TREE_DEPTH},
     BlsPublicKey, BlsScalar, BlsSecretKey, Note, SecretKey, ViewKey,
@@ -110,6 +110,13 @@ pub trait ProverClient {
     fn compute_proof_and_propagate(
         &self,
         utx: &UnprovenTransaction,
+    ) -> Result<Transaction, Self::Error>;
+
+    /// Propagates the moonlight transaction todo: change the name of this client as it is no longer just a prover client
+    /// todo: the name of this client was not adequate anyway as this is a prover and propagation client
+    fn propagate_moonlight_transaction(
+        &self,
+        mt: &MoonlightTransaction,
     ) -> Result<Transaction, Self::Error>;
 }
 
