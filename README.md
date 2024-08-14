@@ -38,8 +38,8 @@ ARGUMENTS:
                             rkyv serialization of the argument proper. Multiple arguments are serialized as a tuple.
                             If omitted, no argument will be passed to the constructor. If contract does not have a
                             constructor, this argument may be omitted.
-    -b, --block_height      Optional starting block height. Scanning the blockchain for notes will be started from
-                            this value. If omitted, scenning will be performed from block height zero. Note that
+    -b, --block_height      Optional starting block height. Scanning the blockchain for notes will start from
+                            this value. If omitted, scanning will be performed from block height zero. Note that
                             it may take a long time to scan the entire blockchain, so in order to limit the waiting 
                             time, user can enter a height from which the scan is to be started. The user needs to
                             know, at least approximately, above which height her unspent notes are located.
