@@ -16,6 +16,11 @@ Full set of arguments:
 cargo r -- --contract-path=./test/bob.wasm --seed="spice property autumn primary undo innocent pole legend stereo mom eternal topic" --config-path=./config.toml --gas-limit=100000000 --gas-price=1 --owner="2e3f56b01f7a43c274714a6d22b93164d561f1247a8cfa7a79eede21420438aa" --nonce=0 --args="3e"
 ```
 
+Moonlight example:
+```sh
+cargo r -- -c ./test/alice.wasm -m "A7gMWt6U6NdMXafvqoMVACdH5hMXubyUhp4MGorNBUv4"
+```
+
 
 ```
 
@@ -47,6 +52,11 @@ ARGUMENTS:
                             from current height minus this value. If omitted or current block height cannot be
                             obtained, absolute starting block height is assumed. This option, if present, overrides 
                             the absolute block height.
+    -m, --moonlight         Optional moonlight secret key. If provided, deplotment will use funds from a moonlight
+                            account. If the opton is missing or a given key is empty, Phoenix account will be used.
+                            Secret key needs to be provided as a base 58 string, e.g.:
+                            A7gMWt6U6NdMXafvqoMVACdH5hMXubyUhp4MGorNBUv4. Note that block-height options (-b, -r) are
+                            ignored when moonlight funding is used.
                              
 ```
 

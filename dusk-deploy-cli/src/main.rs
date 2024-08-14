@@ -52,6 +52,8 @@ async fn main() -> Result<(), Error> {
     let args = cli.args;
     let mut start_bh = cli.block_height;
     let rel_bh = cli.relative_height;
+    let moonlight_sk_bs58 = cli.moonlight;
+    let moonlight: bool = !moonlight_sk_bs58.is_empty();
 
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
 
@@ -67,11 +69,15 @@ async fn main() -> Result<(), Error> {
 
     let wallet_index = 0;
 
-    let seed = seed_from_phrase(seed_phrase)?;
+    let seed = if moonlight {
+        seed_from_bs58(moonlight_sk_bs58)?
+    } else {
+        seed_from_phrase(seed_phrase)?
+    };
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
-    if rel_bh != 0 {
+    if !moonlight && rel_bh != 0 {
         let client = RuskHttpClient::new(blockchain_access_config.rusk_address.clone());
         if let Ok(cur_bh) = BlockchainInquirer::block_height(&client).wait() {
             start_bh = cur_bh - min(cur_bh, rel_bh);
@@ -85,16 +91,29 @@ async fn main() -> Result<(), Error> {
         start_bh,
     )?;
 
-    let result = Executor::deploy(
-        &wallet,
-        &bytecode,
-        &owner,
-        constructor_args,
-        nonce,
-        wallet_index,
-        gas_limit,
-        gas_price,
-    );
+    let result = if moonlight {
+        Executor::deploy_via_moonlight(
+            &wallet,
+            &bytecode,
+            &owner,
+            constructor_args,
+            nonce,
+            wallet_index,
+            gas_limit,
+            gas_price,
+        )
+    } else {
+        Executor::deploy(
+            &wallet,
+            &bytecode,
+            &owner,
+            constructor_args,
+            nonce,
+            wallet_index,
+            gas_limit,
+            gas_price,
+        )
+    };
 
     match result {
         Ok(_) => info!("Deployment successful"),
@@ -116,5 +135,13 @@ fn seed_from_phrase(phrase: impl AsRef<str>) -> Result<[u8; 64], Error> {
     let seed_obj = Seed::new(&mnemonic, "");
     let mut seed = [0u8; 64];
     seed.copy_from_slice(seed_obj.as_bytes());
+    Ok(seed)
+}
+
+// converts base 58 string into a binary seed
+fn seed_from_bs58(bs58_str: impl AsRef<str>) -> Result<[u8; 64], Error> {
+    let v = bs58::decode(bs58_str.as_ref()).into_vec()?;
+    let mut seed = [0u8; 64];
+    seed[0..32].copy_from_slice(&v);
     Ok(seed)
 }

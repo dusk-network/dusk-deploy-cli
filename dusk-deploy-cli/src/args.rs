@@ -51,4 +51,8 @@ pub struct Args {
     /// Relative block height [default: `0`]
     #[clap(short, long, default_value_t = 0)]
     pub relative_height: u64,
+
+    /// Moonlight secret key [default: ``]
+    #[clap(short, long, default_value_t = String::from(""))]
+    pub moonlight: String,
 }

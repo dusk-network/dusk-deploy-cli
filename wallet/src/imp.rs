@@ -12,12 +12,12 @@ use alloc::string::FromUtf8Error;
 use alloc::vec::Vec;
 use std::mem;
 
-use dusk_bytes::Error as BytesError;
-use execution_core::transfer::AccountData;
+use dusk_bytes::{Error as BytesError, Serializable};
+use execution_core::transfer::{AccountData, MoonlightPayload, MoonlightTransaction};
 use execution_core::{
     transfer::{ContractCall, ContractDeploy, ContractExec, Fee, PhoenixPayload, Transaction},
-    BlsPublicKey, BlsScalar, JubJubScalar, Note, PhoenixError, PublicKey, SchnorrSecretKey,
-    SecretKey, TxSkeleton, ViewKey, OUTPUT_NOTES,
+    BlsPublicKey, BlsScalar, BlsSecretKey, JubJubScalar, Note, PhoenixError, PublicKey,
+    SchnorrSecretKey, SecretKey, TxSkeleton, ViewKey, OUTPUT_NOTES,
 };
 use ff::Field;
 use rand_core::{CryptoRng, Error as RngError, RngCore};
@@ -333,6 +333,40 @@ where
             .map_err(Error::from_prover_err)
     }
 
+    fn moonlight_transaction(
+        &self,
+        from_sk: &BlsSecretKey,
+        to: Option<BlsPublicKey>,
+        value: u64,
+        deposit: u64,
+        gas_limit: u64,
+        gas_price: u64,
+        nonce: u64,
+        exec: Option<impl Into<ContractExec>>,
+    ) -> Result<Transaction, Error<S, SC, PC>> {
+        let from = BlsPublicKey::from(from_sk);
+
+        let payload = MoonlightPayload {
+            from,
+            to,
+            value,
+            deposit,
+            gas_limit,
+            gas_price,
+            nonce,
+            exec: exec.map(Into::into),
+        };
+
+        let digest = payload.to_hash_input_bytes();
+        let signature = from_sk.sign(&from, &digest);
+
+        let mt = MoonlightTransaction::new(payload, signature);
+
+        self.prover
+            .propagate_moonlight_transaction(&mt)
+            .map_err(Error::<S, SC, PC>::from_prover_err) // todo: naming should no longer be about prover
+    }
+
     /// Execute a generic contract call or deployment, using Phoenix notes to
     /// pay for gas.
     #[allow(clippy::too_many_arguments)]
@@ -363,6 +397,44 @@ where
             gas_price,
             deposit,
             exec.into(),
+        )
+    }
+
+    /// Execute a generic contract call or deployment, using Moonlight to
+    /// pay for gas.
+    #[allow(clippy::too_many_arguments)]
+    pub fn moonlight_execute(
+        &self,
+        exec: impl Into<ContractExec>,
+        sender_index: u64,
+        gas_limit: u64,
+        gas_price: u64,
+    ) -> Result<Transaction, Error<S, SC, PC>> {
+        let moonlight_sk: BlsSecretKey = self
+            .store
+            .fetch_account_secret_key(sender_index)
+            .map_err(Error::from_store_err)?;
+        let moonlight_pk = BlsPublicKey::from(&moonlight_sk);
+        let acc_data = self
+            .state
+            .fetch_account(&moonlight_pk)
+            .map_err(Error::from_state_err)?;
+
+        println!(
+            "account {} fetched: {:?}",
+            bs58::encode(moonlight_pk.to_bytes()).into_string(),
+            acc_data
+        );
+
+        self.moonlight_transaction(
+            &moonlight_sk,
+            None,
+            0,
+            0,
+            gas_limit,
+            gas_price,
+            acc_data.nonce + 1,
+            Some(exec.into()),
         )
     }
 

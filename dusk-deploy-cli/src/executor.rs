@@ -25,6 +25,7 @@ pub struct Executor;
 
 impl Executor {
     pub fn deploy(
+        // todo: rename to deploy_via_moonlight
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         bytecode: &Vec<u8>,
         owner: &Vec<u8>,
@@ -56,7 +57,37 @@ impl Executor {
         Ok(())
     }
 
+    pub fn deploy_via_moonlight(
+        wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
+        bytecode: &Vec<u8>,
+        owner: &Vec<u8>,
+        constructor_args: Option<Vec<u8>>,
+        nonce: u64,
+        wallet_index: u64,
+        gas_limit: u64,
+        gas_price: u64,
+    ) -> Result<(), Error> {
+        let hash = bytecode_hash(bytecode.as_slice());
+        wallet.moonlight_execute(
+            ContractExec::Deploy(ContractDeploy {
+                bytecode: Bytecode {
+                    hash,
+                    bytes: bytecode.clone(),
+                },
+                owner: owner.clone(),
+                constructor_args,
+                nonce,
+            }),
+            wallet_index,
+            gas_limit,
+            gas_price,
+        )?;
+
+        Ok(())
+    }
+
     pub fn call_method(
+        // todo: rename to call_via_phoenix
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         contract_id: &ContractId,
         method: impl AsRef<str>,
@@ -77,6 +108,29 @@ impl Executor {
             gas_limit,
             gas_price,
             0u64,
+        )?;
+
+        Ok(())
+    }
+
+    pub fn call_via_moonlight(
+        wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
+        contract_id: &ContractId,
+        method: impl AsRef<str>,
+        args: Vec<u8>,
+        wallet_index: u64,
+        gas_limit: u64,
+        gas_price: u64,
+    ) -> Result<(), Error> {
+        wallet.moonlight_execute(
+            ContractExec::Call(ContractCall {
+                contract: contract_id.clone(),
+                fn_name: method.as_ref().to_string().clone(),
+                fn_args: args,
+            }),
+            wallet_index,
+            gas_limit,
+            gas_price,
         )?;
 
         Ok(())
