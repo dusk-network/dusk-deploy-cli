@@ -95,7 +95,7 @@ async fn main() -> Result<(), Error> {
         start_bh,
     )?;
 
-    for i in 11..12 {
+    for i in 15..16 {
         let mut v = Vec::new();
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
@@ -189,8 +189,7 @@ async fn verify_deployment(
         gas_limit,
         gas_price,
     );
-    println!("call_via_moonlight returned={:?}", r);
-    assert!(r.is_ok());
+    assert!(r.is_ok(), "moonlight call failed");
 
     let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
     let r = ContractInquirer::query_contract::<(), u8>(

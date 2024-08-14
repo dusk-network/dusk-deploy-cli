@@ -73,7 +73,6 @@ pub trait Store {
             .into_vec()
             .expect("base58 decoding should work");
         let sk = BlsSecretKey::from_slice(&v).expect("conversion to secret key should work");
-        println!("sk={}", bs58::encode(sk.to_bytes()).into_string());
         Ok(sk)
     }
 }

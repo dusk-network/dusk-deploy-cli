@@ -414,18 +414,17 @@ where
             .store
             .fetch_account_secret_key(sender_index)
             .map_err(Error::from_store_err)?;
-        println!(
-            "fetched account with index {} gotten {}",
-            sender_index,
-            bs58::encode(moonlight_sk.to_bytes()).into_string()
-        );
         let moonlight_pk = BlsPublicKey::from(&moonlight_sk);
         let acc_data = self
             .state
             .fetch_account(&moonlight_pk)
             .map_err(Error::from_state_err)?;
 
-        println!("account fetched: {:?}", acc_data);
+        println!(
+            "account {} fetched: {:?}",
+            bs58::encode(moonlight_pk.to_bytes()).into_string(),
+            acc_data
+        );
 
         self.moonlight_transaction(
             &moonlight_sk,
