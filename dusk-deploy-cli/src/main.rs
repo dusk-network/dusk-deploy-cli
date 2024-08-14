@@ -28,7 +28,6 @@ use rusk_http_client::{BlockchainInquirer, ContractId, ContractInquirer, RuskHtt
 use std::cmp::min;
 use std::fs::File;
 use std::io::Read;
-use std::thread;
 use toml_base_config::BaseConfig;
 use tracing::info;
 use wallet::Wallet;
@@ -96,49 +95,49 @@ async fn main() -> Result<(), Error> {
         start_bh,
     )?;
 
-    for i in 700..1029 {
+    for i in 11..12 {
         let mut v = Vec::new();
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
 
-        // let result = Executor::deploy(
-        //     &wallet,
-        //     &bytecode.clone(),
-        //     &owner.clone(),
-        //     constructor_args,
-        //     nonce + i,
-        //     wallet_index,
-        //     gas_limit,
-        //     gas_price,
-        // );
-        //
-        // match result {
-        //     Ok(_) => info!("Deployment successful {}", i),
-        //     Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
-        // }
+        let result = Executor::deploy(
+            &wallet,
+            &bytecode.clone(),
+            &owner.clone(),
+            constructor_args,
+            nonce + i,
+            wallet_index,
+            gas_limit,
+            gas_price,
+        );
 
-        // if result.is_ok() {
-        let deployed_id = gen_contract_id(bytecode.clone(), nonce + i, owner.clone());
-        // info!("Deployed contract id: {}", hex::encode(&deployed_id));
-
-        println!("verification {}", i);
-        thread::sleep(std::time::Duration::from_secs(15));
-
-        if !method.clone().is_empty() {
-            verify_deployment(
-                &wallet,
-                deployed_id,
-                blockchain_access_config.rusk_address.clone(),
-                method.clone(),
-                wallet_index,
-                gas_limit,
-                gas_price,
-            )
-            .await;
+        match result {
+            Ok(_) => info!("Deployment successful {}", i),
+            Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
         }
-        // } else {
-        //     break;
-        // }
+
+        if result.is_ok() {
+            let deployed_id = gen_contract_id(bytecode.clone(), nonce + i, owner.clone());
+            info!("Deployed contract id: {}", hex::encode(&deployed_id));
+
+            println!("verification {}", i);
+            // thread::sleep(std::time::Duration::from_secs(15));
+
+            if !method.clone().is_empty() {
+                verify_deployment(
+                    &wallet,
+                    deployed_id,
+                    blockchain_access_config.rusk_address.clone(),
+                    method.clone(),
+                    wallet_index,
+                    gas_limit,
+                    gas_price,
+                )
+                .await;
+            }
+        } else {
+            break;
+        }
     }
 
     Ok(())

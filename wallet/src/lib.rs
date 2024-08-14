@@ -57,9 +57,24 @@ pub trait Store {
     /// every time with [`generate_sk`]. It may be reimplemented to
     /// provide a cache for keys, or implement a different key generation
     /// algorithm.
-    fn fetch_account_secret_key(&self, index: u64) -> Result<BlsSecretKey, Self::Error> {
-        let seed = self.get_seed()?;
-        Ok(derive_stake_sk(&seed, index))
+    fn fetch_account_secret_key(&self, _index: u64) -> Result<BlsSecretKey, Self::Error> {
+        // todo: proper implementation
+        // let seed = self.get_seed()?;
+        // Ok(derive_stake_sk(&seed, index))
+
+        // let rng = &mut StdRng::seed_from_u64(0xfeeb);
+        // let sk = BlsSecretKey::random(rng);
+        // let bytes = sk.to_bytes();
+        // println!("sk={}", bs58::encode(bytes).into_string());
+        // let pk = BlsPublicKey::from(&sk);
+        // println!("pk={}", bs58::encode(pk.to_bytes()).into_string());
+
+        let v = bs58::decode("A7gMWt6U6NdMXafvqoMVACdH5hMXubyUhp4MGorNBUv4")
+            .into_vec()
+            .expect("base58 decoding should work");
+        let sk = BlsSecretKey::from_slice(&v).expect("conversion to secret key should work");
+        println!("sk={}", bs58::encode(sk.to_bytes()).into_string());
+        Ok(sk)
     }
 }
 

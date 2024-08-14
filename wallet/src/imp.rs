@@ -12,7 +12,7 @@ use alloc::string::FromUtf8Error;
 use alloc::vec::Vec;
 use std::mem;
 
-use dusk_bytes::Error as BytesError;
+use dusk_bytes::{Error as BytesError, Serializable};
 use execution_core::transfer::{AccountData, MoonlightPayload, MoonlightTransaction};
 use execution_core::{
     transfer::{ContractCall, ContractDeploy, ContractExec, Fee, PhoenixPayload, Transaction},
@@ -403,26 +403,29 @@ where
     /// Execute a generic contract call or deployment, using Moonlight to
     /// pay for gas.
     #[allow(clippy::too_many_arguments)]
-    pub fn moonlight_execute<Rng>(
+    pub fn moonlight_execute(
         &self,
-        rng: &mut Rng,
         exec: impl Into<ContractExec>,
         sender_index: u64,
         gas_limit: u64,
         gas_price: u64,
-    ) -> Result<Transaction, Error<S, SC, PC>>
-    where
-        Rng: RngCore + CryptoRng,
-    {
-        let moonlight_sk = self
+    ) -> Result<Transaction, Error<S, SC, PC>> {
+        let moonlight_sk: BlsSecretKey = self
             .store
             .fetch_account_secret_key(sender_index)
             .map_err(Error::from_store_err)?;
+        println!(
+            "fetched account with index {} gotten {}",
+            sender_index,
+            bs58::encode(moonlight_sk.to_bytes()).into_string()
+        );
         let moonlight_pk = BlsPublicKey::from(&moonlight_sk);
         let acc_data = self
             .state
             .fetch_account(&moonlight_pk)
             .map_err(Error::from_state_err)?;
+
+        println!("account fetched: {:?}", acc_data);
 
         self.moonlight_transaction(
             &moonlight_sk,

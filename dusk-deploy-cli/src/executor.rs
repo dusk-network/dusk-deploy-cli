@@ -92,9 +92,7 @@ impl Executor {
         gas_limit: u64,
         gas_price: u64,
     ) -> Result<(), Error> {
-        let mut rng = StdRng::seed_from_u64(0xcafe);
         wallet.moonlight_execute(
-            &mut rng,
             ContractExec::Call(ContractCall {
                 contract: contract_id.clone(),
                 fn_name: method.as_ref().to_string().clone(),
