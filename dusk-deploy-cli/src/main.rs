@@ -95,11 +95,12 @@ async fn main() -> Result<(), Error> {
         start_bh,
     )?;
 
-    for i in 16..17 {
+    for i in 0..1024 {
         let mut v = Vec::new();
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
 
+        info!("Deploying with nonce {}", nonce + i);
         let result = Executor::deploy_via_moonlight(
             &wallet,
             &bytecode.clone(),
@@ -120,21 +121,21 @@ async fn main() -> Result<(), Error> {
             let deployed_id = gen_contract_id(bytecode.clone(), nonce + i, owner.clone());
             info!("Deployed contract id: {}", hex::encode(&deployed_id));
 
-            println!("verification {}", i);
+            // println!("verification {}", i);
             // thread::sleep(std::time::Duration::from_secs(15));
 
-            if !method.clone().is_empty() {
-                verify_deployment(
-                    &wallet,
-                    deployed_id,
-                    blockchain_access_config.rusk_address.clone(),
-                    method.clone(),
-                    wallet_index,
-                    gas_limit,
-                    gas_price,
-                )
-                .await;
-            }
+            // if !method.clone().is_empty() {
+            //     verify_deployment(
+            //         &wallet,
+            //         deployed_id,
+            //         blockchain_access_config.rusk_address.clone(),
+            //         method.clone(),
+            //         wallet_index,
+            //         gas_limit,
+            //         gas_price,
+            //     )
+            //     .await;
+            // }
         } else {
             break;
         }
@@ -169,16 +170,6 @@ async fn verify_deployment(
         random_arg
     );
     let method_args = vec![random_arg];
-    // let r = Executor::call_method(
-    //     &wallet,
-    //     &ContractId::from(contract_id),
-    //     "init",
-    //     method_args,
-    //     wallet_index,
-    //     gas_limit,
-    //     gas_price,
-    // );
-    // assert!(r.is_ok());
 
     let r = Executor::call_via_moonlight(
         &wallet,
