@@ -95,12 +95,12 @@ async fn main() -> Result<(), Error> {
         start_bh,
     )?;
 
-    for i in 15..16 {
+    for i in 16..17 {
         let mut v = Vec::new();
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
 
-        let result = Executor::deploy(
+        let result = Executor::deploy_via_moonlight(
             &wallet,
             &bytecode.clone(),
             &owner.clone(),
