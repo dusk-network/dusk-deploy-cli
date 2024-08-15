@@ -56,3 +56,41 @@ Example configuration file for blockchain connection:
 rusk_address = "http://127.0.0.1:8080"
 prover_address = "http://127.0.0.1:8080"
 ```
+
+
+
+#Test Cases for Deployment System (DS)
+
+##DS-01
+
+1. Test Case ID: DS-01
+2. Title: Deploying smart contracts to Dusk blockchain using Phoenix funds and Moonlight accounts.
+3. Description: To validate that a substantial number of contracts have been correctly deployed and are operational, in a sense that they correctly perform state changing methods as well as queries.
+4. You need to have the following:
+   - a running Rusk node
+   - a wallet with sufficient Phoenix funds and a seed to access them
+   - 8 moonlight accounts with sufficient Dusk funds and 8 secret keys to access them
+5. Test steps:
+   1. Run a test tool which deploys N=2000 contracts using Moonlight funds.
+   2. Run a test tool which verifies the contracts from step 1 by calling a state changing method and then calling a query to verify that state has been correctly changed.
+   3. Make sure disk memory usage for state is as expected, make sure that Rusk node is stable during and after the test.
+   4. Repeat the above procedure using Phoenix funds (it will be more time-consuming so you can assume N < 2000)
+6. Teardown:
+   1. Stop the Rusk node.
+
+##DS-02
+
+8. Test Case ID: DS-02
+9. Title: Calling state-changing method of a non-deployed contract.
+10. Description: To validate that a calling a contract which is not deploy does not destabilize the system and produces a correct error scenario.
+11. You need to have the following:
+    - a running Rusk node
+    - a wallet with sufficient Phoenix funds and a seed to access them
+    - moonlight account with sufficient Dusk funds and a secret key to access it
+12. Test steps:
+    1. Run a test tool which calls a state changing method.
+    2. Make sure system is stable (by deploying a contract and calling its method) and that you've gotten a correct error message.
+    4. Repeat the above procedure using Phoenix funds
+13. Teardown:
+    1. Stop the Rusk node.
+   

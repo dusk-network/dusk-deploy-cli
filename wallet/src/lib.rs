@@ -22,7 +22,6 @@ use execution_core::{
     BlsPublicKey, BlsScalar, BlsSecretKey, Note, SecretKey, ViewKey,
 };
 use poseidon_merkle::Opening as PoseidonOpening;
-use rand::rngs::StdRng;
 use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use sha2::{Digest, Sha256};

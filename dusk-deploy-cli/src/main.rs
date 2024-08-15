@@ -163,21 +163,21 @@ fn do_run(
             let deployed_id = gen_contract_id(bytecode.clone(), nonce + i as u64, owner.clone());
             info!("Deployed contract id: {}", hex::encode(&deployed_id));
 
-        // println!("verification {}", i);
-        // thread::sleep(std::time::Duration::from_secs(15));
+            println!("verification {}", i);
+            // thread::sleep(std::time::Duration::from_secs(15));
 
-        // if !method.is_empty() {
-        //     verify_deployment(
-        //         &wallet,
-        //         deployed_id,
-        //         blockchain_access_config.rusk_address.clone(),
-        //         method,
-        //         wallet_index,
-        //         gas_limit,
-        //         gas_price,
-        //     )
-        //     .wait();
-        // }
+            if !method.is_empty() {
+                verify_deployment(
+                    &wallet,
+                    deployed_id,
+                    blockchain_access_config.rusk_address.clone(),
+                    method,
+                    wallet_index,
+                    gas_limit,
+                    gas_price,
+                )
+                .wait();
+            }
         } else {
             break;
         }
