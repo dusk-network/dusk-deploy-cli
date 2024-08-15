@@ -81,7 +81,7 @@ pub trait Store {
             "A63cUjhdRY6qH6RTCWUYbmG8twFmd5q3AX9j6P2WMPWn",
         ];
 
-        let v = bs58::decode(sk_a[(index % 4) as usize])
+        let v = bs58::decode(sk_a[(index % sk_a.len() as u64) as usize])
             .into_vec()
             .expect("base58 decoding should work");
         let sk = BlsSecretKey::from_slice(&v).expect("conversion to secret key should work");
