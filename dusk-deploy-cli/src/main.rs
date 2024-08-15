@@ -28,6 +28,8 @@ use rusk_http_client::{BlockchainInquirer, ContractId, ContractInquirer, RuskHtt
 use std::cmp::min;
 use std::fs::File;
 use std::io::Read;
+use std::thread;
+use tokio::task::JoinSet;
 use toml_base_config::BaseConfig;
 use tracing::info;
 use wallet::Wallet;
@@ -52,11 +54,11 @@ async fn main() -> Result<(), Error> {
     let gas_price = cli.gas_price;
     let contract_path = cli.contract_path.as_path();
     let owner = cli.owner;
-    let nonce = cli.nonce;
+    let _nonce = cli.nonce;
     let args = cli.args;
     let mut start_bh = cli.block_height;
     let rel_bh = cli.relative_height;
-    let method = cli.method;
+    let _method = cli.method;
 
     let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
 
@@ -70,7 +72,7 @@ async fn main() -> Result<(), Error> {
         _constructor_args = Some(v);
     }
 
-    let wallet_index = 0;
+    let _wallet_index = 0;
 
     let phrase = seed_phrase.to_string();
     let mnemonic = Mnemonic::from_phrase(&phrase, Language::English)
@@ -79,7 +81,7 @@ async fn main() -> Result<(), Error> {
     let mut seed = [0u8; 64];
     seed.copy_from_slice(seed_obj.as_bytes());
 
-    let owner = hex::decode(owner).expect("decoding owner should succeed");
+    let _owner = hex::decode(owner).expect("decoding owner should succeed");
 
     if rel_bh != 0 {
         let client = RuskHttpClient::new(blockchain_access_config.rusk_address.clone());
@@ -88,25 +90,65 @@ async fn main() -> Result<(), Error> {
         }
     }
 
-    let wallet = WalletBuilder::build(
-        blockchain_access_config.rusk_address.clone(),
-        blockchain_access_config.clone().prover_address,
-        &seed,
-        start_bh,
-    )?;
+    let mut join_set = JoinSet::new();
 
-    for i in 0..1024 {
+    for index in 0..8 {
+        let bytecode = bytecode.clone();
+        let wallet = WalletBuilder::build(
+            blockchain_access_config.rusk_address.clone(),
+            blockchain_access_config.clone().prover_address,
+            &seed,
+            start_bh,
+        )?;
+        let blockchain_access_config = blockchain_access_config.clone();
+        join_set.spawn(async move {
+            do_run(
+                index * 250,
+                index * 250 + 250,
+                index as u64,
+                &bytecode,
+                &wallet,
+                &blockchain_access_config,
+                gas_limit,
+                gas_price,
+            )
+        });
+        thread::sleep(std::time::Duration::from_millis(2500))
+    }
+
+    while let Some(res) = join_set.join_next().wait() {
+        println!("res={:?}", res)
+    }
+
+    Ok(())
+}
+
+fn do_run(
+    r1: usize,
+    r2: usize,
+    wallet_index: u64,
+    bytecode: &Vec<u8>,
+    wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
+    blockchain_access_config: &BlockchainAccessConfig,
+    gas_limit: u64,
+    gas_price: u64,
+) {
+    let nonce = 0u64;
+    let owner = hex::decode("".to_string()).expect("decoding owner should succeed");
+    let method = "value";
+
+    for i in r1..r2 {
         let mut v = Vec::new();
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
 
-        info!("Deploying with nonce {}", nonce + i);
+        info!("Deploying with nonce {}", nonce + i as u64);
         let result = Executor::deploy_via_moonlight(
             &wallet,
             &bytecode.clone(),
             &owner.clone(),
             constructor_args,
-            nonce + i,
+            nonce + i as u64,
             wallet_index,
             gas_limit,
             gas_price,
@@ -114,34 +156,32 @@ async fn main() -> Result<(), Error> {
 
         match result {
             Ok(_) => info!("Deployment successful {}", i),
-            Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
+            Err(ref err) => info!("{} when deploying", err),
         }
 
         if result.is_ok() {
-            let deployed_id = gen_contract_id(bytecode.clone(), nonce + i, owner.clone());
+            let deployed_id = gen_contract_id(bytecode.clone(), nonce + i as u64, owner.clone());
             info!("Deployed contract id: {}", hex::encode(&deployed_id));
 
-            // println!("verification {}", i);
-            // thread::sleep(std::time::Duration::from_secs(15));
+        // println!("verification {}", i);
+        // thread::sleep(std::time::Duration::from_secs(15));
 
-            // if !method.clone().is_empty() {
-            //     verify_deployment(
-            //         &wallet,
-            //         deployed_id,
-            //         blockchain_access_config.rusk_address.clone(),
-            //         method.clone(),
-            //         wallet_index,
-            //         gas_limit,
-            //         gas_price,
-            //     )
-            //     .await;
-            // }
+        // if !method.is_empty() {
+        //     verify_deployment(
+        //         &wallet,
+        //         deployed_id,
+        //         blockchain_access_config.rusk_address.clone(),
+        //         method,
+        //         wallet_index,
+        //         gas_limit,
+        //         gas_price,
+        //     )
+        //     .wait();
+        // }
         } else {
             break;
         }
     }
-
-    Ok(())
 }
 
 // converts seed phrase into a binary seed

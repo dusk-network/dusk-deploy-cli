@@ -22,6 +22,7 @@ use execution_core::{
     BlsPublicKey, BlsScalar, BlsSecretKey, Note, SecretKey, ViewKey,
 };
 use poseidon_merkle::Opening as PoseidonOpening;
+use rand::rngs::StdRng;
 use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use sha2::{Digest, Sha256};
@@ -57,19 +58,30 @@ pub trait Store {
     /// every time with [`generate_sk`]. It may be reimplemented to
     /// provide a cache for keys, or implement a different key generation
     /// algorithm.
-    fn fetch_account_secret_key(&self, _index: u64) -> Result<BlsSecretKey, Self::Error> {
+    fn fetch_account_secret_key(&self, index: u64) -> Result<BlsSecretKey, Self::Error> {
         // todo: proper implementation
         // let seed = self.get_seed()?;
         // Ok(derive_stake_sk(&seed, index))
 
-        // let rng = &mut StdRng::seed_from_u64(0xfeeb);
+        // let rng = &mut StdRng::seed_from_u64(0x1000 * index);
         // let sk = BlsSecretKey::random(rng);
         // let bytes = sk.to_bytes();
-        // println!("sk={}", bs58::encode(bytes).into_string());
+        // println!("sk{}={}", index, bs58::encode(bytes).into_string());
         // let pk = BlsPublicKey::from(&sk);
-        // println!("pk={}", bs58::encode(pk.to_bytes()).into_string());
+        // println!("pk{}={}", index, bs58::encode(pk.to_bytes()).into_string());
 
-        let v = bs58::decode("A7gMWt6U6NdMXafvqoMVACdH5hMXubyUhp4MGorNBUv4")
+        let sk_a = [
+            "A7gMWt6U6NdMXafvqoMVACdH5hMXubyUhp4MGorNBUv4",
+            "DNWhPoYYF4fKWAGfgYzBXExrmZ1ZJ9kcocAJhzFrucur",
+            "FafsxT6GrMLtdm7vEug9bhnhzohJorgnrmUL1Ujhuw6G",
+            "DztAWBfiMBDcAPWJsiHW3qSrcxSu8qKe3YiNqri5CZHe",
+            "5grZZpJpQxQVWXyAmG8wjboDwieZFP2z2tQ2sHQUWNuL",
+            "FGk8d5YpCnDnBmeX1GpsKhWs8x4fnPETLtHXW3YqUyMj",
+            "2KPhhiAYorwv9dDFL6MRxafT16g5sKb44uMvP77rArMr",
+            "A63cUjhdRY6qH6RTCWUYbmG8twFmd5q3AX9j6P2WMPWn",
+        ];
+
+        let v = bs58::decode(sk_a[(index % 4) as usize])
             .into_vec()
             .expect("base58 decoding should work");
         let sk = BlsSecretKey::from_slice(&v).expect("conversion to secret key should work");

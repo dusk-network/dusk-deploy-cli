@@ -19,6 +19,7 @@ ff = { version = "0.13", default-features = false }
 hex = "0.4"
 bs58 = "0.4"
 thiserror = "1.0"
+rand = "^0.8"
 
 # rusk dependencies
 execution-core = { version = "0.1.0", path = "../../../rust/rusk/execution-core" }
