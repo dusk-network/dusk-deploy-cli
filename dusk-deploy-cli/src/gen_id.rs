@@ -15,8 +15,7 @@ pub fn gen_contract_id(bytes: impl AsRef<[u8]>, nonce: u64, owner: impl AsRef<[u
     hasher.update(bytes.as_ref());
     hasher.update(nonce.to_le_bytes());
     hasher.update(owner.as_ref());
-    let hash_bytes = hasher.finalize();
-    hash_bytes
+    hasher.finalize()
 }
 
 /// Hashes scalars and arbitrary slices of bytes using Blake2b, returning an

@@ -46,6 +46,9 @@ pub enum Error {
     /// Tracing errors
     #[error("Tracing error")]
     Tracing,
+    /// Base 58 errors
+    #[error(transparent)]
+    Base58(Arc<bs58::decode::Error>),
 }
 
 impl From<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>> for Error {
@@ -81,5 +84,11 @@ impl From<rusk_prover::ProverError> for Error {
 impl From<rusk_http_client::Error> for Error {
     fn from(err: rusk_http_client::Error) -> Self {
         Error::RuskHttpClient(Arc::from(err))
+    }
+}
+
+impl From<bs58::decode::Error> for Error {
+    fn from(err: bs58::decode::Error) -> Self {
+        Error::Base58(Arc::from(err))
     }
 }

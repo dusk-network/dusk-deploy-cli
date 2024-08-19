@@ -24,11 +24,11 @@ fn bytecode_hash(bytecode: impl AsRef<[u8]>) -> [u8; 32] {
 pub struct Executor;
 
 impl Executor {
-    pub fn deploy(
-        // todo: rename to deploy_via_moonlight
+    #[allow(clippy::too_many_arguments)]
+    pub fn deploy_via_phoenix(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         bytecode: &Vec<u8>,
-        owner: &Vec<u8>,
+        owner: &[u8],
         constructor_args: Option<Vec<u8>>,
         nonce: u64,
         wallet_index: u64,
@@ -44,7 +44,7 @@ impl Executor {
                     hash,
                     bytes: bytecode.clone(),
                 },
-                owner: owner.clone(),
+                owner: owner.to_vec(),
                 constructor_args,
                 nonce,
             }),
@@ -57,10 +57,11 @@ impl Executor {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn deploy_via_moonlight(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         bytecode: &Vec<u8>,
-        owner: &Vec<u8>,
+        owner: &[u8],
         constructor_args: Option<Vec<u8>>,
         nonce: u64,
         wallet_index: u64,
@@ -74,7 +75,7 @@ impl Executor {
                     hash,
                     bytes: bytecode.clone(),
                 },
-                owner: owner.clone(),
+                owner: owner.to_vec(),
                 constructor_args,
                 nonce,
             }),
@@ -86,8 +87,7 @@ impl Executor {
         Ok(())
     }
 
-    pub fn call_method(
-        // todo: rename to call_via_phoenix
+    pub fn call_via_phoenix(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         contract_id: &ContractId,
         method: impl AsRef<str>,
@@ -100,7 +100,7 @@ impl Executor {
         wallet.phoenix_execute(
             &mut rng,
             ContractExec::Call(ContractCall {
-                contract: contract_id.clone(),
+                contract: *contract_id,
                 fn_name: method.as_ref().to_string().clone(),
                 fn_args: args,
             }),
@@ -124,7 +124,7 @@ impl Executor {
     ) -> Result<(), Error> {
         wallet.moonlight_execute(
             ContractExec::Call(ContractCall {
-                contract: contract_id.clone(),
+                contract: *contract_id,
                 fn_name: method.as_ref().to_string().clone(),
                 fn_args: args,
             }),
