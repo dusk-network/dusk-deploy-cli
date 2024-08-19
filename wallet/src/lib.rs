@@ -104,6 +104,7 @@ pub fn derive_stake_sk(seed: &[u8; 64], index: u64) -> BlsSecretKey {
 }
 
 /// Types that are client of the prover.
+// todo: naming - this client is not only prover client but prover and/or propagation client
 pub trait ProverClient {
     /// Error returned by the node client.
     type Error: std::error::Error;
@@ -114,8 +115,7 @@ pub trait ProverClient {
         utx: &UnprovenTransaction,
     ) -> Result<Transaction, Self::Error>;
 
-    /// Propagates the moonlight transaction todo: change the name of this client as it is no longer just a prover client
-    /// todo: the name of this client was not adequate anyway as this is a prover and propagation client
+    /// Propagates the Moonlight transaction
     fn propagate_moonlight_transaction(
         &self,
         mt: &MoonlightTransaction,

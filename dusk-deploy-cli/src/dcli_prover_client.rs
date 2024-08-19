@@ -72,7 +72,6 @@ impl wallet::ProverClient for DCliProverClient {
         let _ = self.state.call(2, "Chain", &propagate_req).wait()?;
         self.status("Transaction propagated!");
 
-        let tx: Transaction = tx.into();
         let tx_id = BlsScalar::hash_to_scalar(tx.to_hash_input_bytes().as_slice());
         let tx_id_str = hex::encode(tx_id.to_bytes());
         info!("Transaction id = {}", tx_id_str);
@@ -106,7 +105,6 @@ impl wallet::ProverClient for DCliProverClient {
         let _ = self.state.call(2, "Chain", &propagate_req).wait()?;
         self.status("Transaction propagated!");
 
-        let tx: Transaction = tx.into();
         let tx_id = BlsScalar::hash_to_scalar(tx.to_hash_input_bytes().as_slice());
         let tx_id_str = hex::encode(tx_id.to_bytes());
         info!("Transaction id = {}", tx_id_str);

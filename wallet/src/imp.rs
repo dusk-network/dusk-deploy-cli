@@ -201,7 +201,7 @@ where
 
         let unspent_notes = notes
             .into_iter()
-            .zip(nullifiers.into_iter())
+            .zip(nullifiers)
             .filter(|(_, nullifier)| !existing_nullifiers.contains(nullifier))
             .map(|((note, _), _)| note)
             .collect();
@@ -216,6 +216,7 @@ where
     ///
     /// We also return the outputs with a possible change note (if applicable).
     #[allow(clippy::type_complexity)]
+    #[allow(clippy::too_many_arguments)]
     fn inputs_and_change_output<Rng: RngCore + CryptoRng>(
         &self,
         rng: &mut Rng,
@@ -285,6 +286,7 @@ where
         Ok((inputs, outputs))
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn phoenix_transaction<Rng, MaybeExec>(
         &self,
         rng: &mut Rng,
@@ -304,9 +306,9 @@ where
 
         let (inputs, outputs) = self.inputs_and_change_output(
             rng,
-            &sender_sk,
+            sender_sk,
             &sender_pk,
-            &receiver_pk,
+            receiver_pk,
             value,
             gas_limit * gas_price,
             deposit,
@@ -319,7 +321,7 @@ where
         let utx = new_unproven_tx(
             rng,
             &self.state,
-            &sender_sk,
+            sender_sk,
             inputs,
             outputs,
             fee,
@@ -333,6 +335,7 @@ where
             .map_err(Error::from_prover_err)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn moonlight_transaction(
         &self,
         from_sk: &BlsSecretKey,
@@ -548,7 +551,7 @@ fn new_unproven_tx<Rng: RngCore + CryptoRng, SC: StateClient>(
 
     let inputs: Vec<UnprovenTransactionInput> = inputs
         .into_iter()
-        .zip(openings.into_iter())
+        .zip(openings)
         .map(|((note, value, value_blinder), opening)| {
             UnprovenTransactionInput::new(
                 rng,

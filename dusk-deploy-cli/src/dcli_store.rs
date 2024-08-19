@@ -14,7 +14,7 @@ pub struct DCliStore {
 
 impl DCliStore {
     pub fn new(seed: &[u8; 64]) -> Self {
-        Self { seed: seed.clone() }
+        Self { seed: *seed }
     }
 }
 
@@ -22,6 +22,6 @@ impl Store for DCliStore {
     type Error = Error;
 
     fn get_seed(&self) -> Result<[u8; 64], Self::Error> {
-        Ok(self.seed.clone())
+        Ok(self.seed)
     }
 }

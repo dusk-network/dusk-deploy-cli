@@ -52,11 +52,11 @@ ARGUMENTS:
                             from current height minus this value. If omitted or current block height cannot be
                             obtained, absolute starting block height is assumed. This option, if present, overrides 
                             the absolute block height.
-    -m, --moonlight         Optional moonlight secret key. If provided, deplotment will use funds from a moonlight
-                            account. If the opton is missing or a given key is empty, Phoenix account will be used.
+    -m, --moonlight         Optional moonlight secret key. If provided, deployment will use funds from a Moonlight
+                            account. If the option is missing or a given key is empty, Phoenix account will be used.
                             Secret key needs to be provided as a base 58 string, e.g.:
                             A7gMWt6U6NdMXafvqoMVACdH5hMXubyUhp4MGorNBUv4. Note that block-height options (-b, -r) are
-                            ignored when moonlight funding is used.
+                            ignored when Moonlight funding is used.
                              
 ```
 

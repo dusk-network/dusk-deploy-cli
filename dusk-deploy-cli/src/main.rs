@@ -63,7 +63,7 @@ async fn main() -> Result<(), Error> {
 
     let mut constructor_args: Option<Vec<u8>> = None;
     if !args.is_empty() {
-        let v = hex::decode(args).expect("decoding constructore arguments should succeed");
+        let v = hex::decode(args).expect("decoding constructor arguments should succeed");
         constructor_args = Some(v);
     }
 
@@ -103,7 +103,7 @@ async fn main() -> Result<(), Error> {
             gas_price,
         )
     } else {
-        Executor::deploy(
+        Executor::deploy_via_phoenix(
             &wallet,
             &bytecode,
             &owner,
@@ -122,7 +122,7 @@ async fn main() -> Result<(), Error> {
 
     if result.is_ok() {
         let deployed_id = gen_contract_id(bytecode, nonce, owner);
-        info!("Deployed contract id: {}", hex::encode(&deployed_id));
+        info!("Deployed contract id: {}", hex::encode(deployed_id));
     }
 
     Ok(())
