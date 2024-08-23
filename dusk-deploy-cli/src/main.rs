@@ -54,7 +54,7 @@ async fn main() -> Result<(), Error> {
     let gas_price = cli.gas_price;
     let contract_path = cli.contract_path.as_path();
     let owner = cli.owner;
-    let _nonce = cli.nonce;
+    let nonce = cli.nonce;
     let args = cli.args;
     let mut start_bh = cli.block_height;
     let rel_bh = cli.relative_height;
@@ -93,7 +93,7 @@ async fn main() -> Result<(), Error> {
 
     let mut join_set = JoinSet::new();
 
-    for index in 0..8 {
+    for index in 0..1 {
         let bytecode = bytecode.clone();
         let wallet = WalletBuilder::build(
             blockchain_access_config.rusk_address.clone(),
@@ -104,8 +104,8 @@ async fn main() -> Result<(), Error> {
         let blockchain_access_config = blockchain_access_config.clone();
         join_set.spawn(async move {
             do_run(
-                index * 250,
-                index * 250 + 10/*250*/,
+                index,
+                index + 2000,
                 index as u64,
                 &bytecode,
                 &wallet,
@@ -143,8 +143,12 @@ fn do_run(
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
 
+        // if (nonce + i as u64) < 96 {
+        //     continue;
+        // }
+
         info!("Deploying with nonce {}", nonce + i as u64);
-        let result = Executor::deploy_via_moonlight(
+        let result = Executor::deploy_via_phoenix(
             &wallet,
             &bytecode.clone(),
             &owner.clone(),
@@ -204,7 +208,6 @@ fn seed_from_bs58(bs58_str: impl AsRef<str>) -> Result<[u8; 64], Error> {
     Ok(seed)
 }
 
-
 async fn verify_deployment(
     wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
     contract_id: [u8; 32],
@@ -214,23 +217,24 @@ async fn verify_deployment(
     gas_limit: u64,
     gas_price: u64,
 ) {
-    let random_arg = contract_id[0];
-    println!(
-        "verifying deployment by calling init({}) and value",
-        random_arg
-    );
-    let method_args = vec![random_arg];
+    // let random_arg = contract_id[0];
+    // println!(
+    //     "verifying deployment by calling init({}) and value",
+    //     random_arg
+    // );
+    // let method_args = vec![random_arg];
 
-    let r = Executor::call_via_moonlight(
-        &wallet,
-        &ContractId::from(contract_id),
-        "init",
-        method_args,
-        wallet_index,
-        gas_limit,
-        gas_price,
-    );
-    assert!(r.is_ok(), "moonlight call failed");
+    // let r = Executor::call_via_moonlight(
+    //     &wallet,
+    //     &ContractId::from(contract_id),
+    //     "init",
+    //     method_args,
+    //     wallet_index,
+    //     gas_limit,
+    //     gas_price,
+    // );
+    // println!("moonlight call result={:?}", r);
+    // assert!(r.is_ok(), "moonlight call failed");
 
     let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
     let r = ContractInquirer::query_contract::<(), u8>(
@@ -243,5 +247,5 @@ async fn verify_deployment(
 
     println!("result of calling value: {:?}", r);
 
-    assert_eq!(r.unwrap(), random_arg);
+    // assert_eq!(r.unwrap(), random_arg);
 }

@@ -16,10 +16,14 @@ mod imp;
 
 use alloc::vec::Vec;
 use dusk_bytes::{DeserializableSlice, Serializable, Write};
-use execution_core::transfer::{AccountData, MoonlightTransaction};
 use execution_core::{
-    transfer::{Transaction, TRANSFER_TREE_DEPTH},
-    BlsPublicKey, BlsScalar, BlsSecretKey, Note, SecretKey, ViewKey,
+    signatures::bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
+    transfer::{
+        moonlight::{AccountData, Transaction as MoonlightTransaction},
+        phoenix::{Note, SecretKey, ViewKey, NOTES_TREE_DEPTH},
+        Transaction,
+    },
+    BlsScalar,
 };
 use poseidon_merkle::Opening as PoseidonOpening;
 use rand_chacha::ChaCha12Rng;
@@ -173,7 +177,7 @@ pub trait StateClient {
     fn fetch_opening(
         &self,
         note: &Note,
-    ) -> Result<PoseidonOpening<(), TRANSFER_TREE_DEPTH>, Self::Error>;
+    ) -> Result<PoseidonOpening<(), NOTES_TREE_DEPTH>, Self::Error>;
 
     // Queries the node for the stake of a key. If the key has no stake, a
     // `Default` stake info should be returned.

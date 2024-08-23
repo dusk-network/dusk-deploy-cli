@@ -7,8 +7,14 @@
 use crate::block::Block;
 use crate::Error;
 use dusk_bytes::Serializable;
-use execution_core::transfer::{AccountData, ContractId, TreeLeaf};
-use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
+use execution_core::{
+    signatures::bls::PublicKey as BlsPublicKey,
+    transfer::{
+        moonlight::AccountData,
+        phoenix::{Note, TreeLeaf, ViewKey},
+    },
+    BlsScalar, ContractId,
+};
 use poseidon_merkle::Opening as PoseidonOpening;
 use rusk_http_client::RuskHttpClient;
 use rusk_http_client::{ContractInquirer, StreamAux};
@@ -26,7 +32,7 @@ const CONTRACT_ID_BYTES: usize = 32;
 const fn reserved(b: u8) -> ContractId {
     let mut bytes = [0u8; CONTRACT_ID_BYTES];
     bytes[0] = b;
-    bytes
+    ContractId::from_bytes(bytes)
 }
 
 const TRANSFER_CONTRACT: ContractId = reserved(0x1);
@@ -99,7 +105,7 @@ impl StateClient for DCliStateClient {
         let mut stream = ContractInquirer::query_contract_with_feeder(
             &self.client,
             start_height,
-            TRANSFER_CONTRACT,
+            TRANSFER_CONTRACT.to_bytes(),
             "leaves_from_height",
         )
         .wait()?;
