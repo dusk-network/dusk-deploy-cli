@@ -358,22 +358,6 @@ where
         nonce: u64,
         exec: Option<impl Into<ContractExec>>,
     ) -> Result<Transaction, Error<S, SC, PC>> {
-        // let from = BlsPublicKey::from(from_sk);
-
-        // let payload = MoonlightPayload {
-        //     from,
-        //     to,
-        //     value,
-        //     deposit,
-        //     gas_limit,
-        //     gas_price,
-        //     nonce,
-        //     exec: exec.map(Into::into),
-        // };
-
-        // let digest = payload.to_hash_input_bytes();
-        // let signature = from_sk.sign(&from, &digest);
-
         let mt = MoonlightTransaction::new(
             from_sk,
             to,
