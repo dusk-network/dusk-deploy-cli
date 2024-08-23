@@ -10,8 +10,8 @@ execution-core = { version = "0.1.0", path = "../../rusk/execution-core" }
 rusk-prover = { version = "0.3.0", path = "../../rusk/rusk-prover" }
 tiny-bip39 = "0.8"
 dusk-bls12_381 = "0.12"
-dusk-plonk = "0.19"
-poseidon-merkle = { version = "0.6", features = ["rkyv-impl"] }
+dusk-plonk = "0.20"
+poseidon-merkle = { version = "0.7", features = ["rkyv-impl"] }
 dusk-bytes = "0.1"
 tokio-stream = { version = "0.1", features = ["sync"] }
 tokio = { version = "1.21", features = ["full"] }

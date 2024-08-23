@@ -2,8 +2,10 @@ use crate::block::Block;
 use crate::Error;
 use dusk_bytes::DeserializableSlice;
 use dusk_plonk::prelude::Proof;
-use execution_core::transfer::MoonlightTransaction;
-use execution_core::{transfer::Transaction, BlsScalar};
+use execution_core::{
+    transfer::{moonlight::Transaction as MoonlightTransaction, Transaction},
+    BlsScalar,
+};
 use rusk_http_client::{BlockchainInquirer, RuskHttpClient, RuskRequest};
 use rusk_prover::UnprovenTransaction;
 use std::borrow::Cow;

@@ -7,8 +7,9 @@
 use crate::dcli_prover_client::DCliProverClient;
 use crate::dcli_state_client::DCliStateClient;
 use crate::dcli_store::DCliStore;
-use execution_core::bytecode::Bytecode;
-use execution_core::transfer::{ContractCall, ContractDeploy, ContractExec};
+use execution_core::transfer::contract_exec::{
+    ContractBytecode, ContractCall, ContractDeploy, ContractExec,
+};
 use rand::prelude::*;
 use rand::rngs::StdRng;
 use rusk_http_client::ContractId;
@@ -40,7 +41,7 @@ impl Executor {
         wallet.phoenix_execute(
             &mut rng,
             ContractExec::Deploy(ContractDeploy {
-                bytecode: Bytecode {
+                bytecode: ContractBytecode {
                     hash,
                     bytes: bytecode.clone(),
                 },
@@ -71,7 +72,7 @@ impl Executor {
         let hash = bytecode_hash(bytecode.as_slice());
         wallet.moonlight_execute(
             ContractExec::Deploy(ContractDeploy {
-                bytecode: Bytecode {
+                bytecode: ContractBytecode {
                     hash,
                     bytes: bytecode.clone(),
                 },
@@ -100,7 +101,7 @@ impl Executor {
         wallet.phoenix_execute(
             &mut rng,
             ContractExec::Call(ContractCall {
-                contract: *contract_id,
+                contract: (*contract_id).into(),
                 fn_name: method.as_ref().to_string().clone(),
                 fn_args: args,
             }),
@@ -124,7 +125,7 @@ impl Executor {
     ) -> Result<(), Error> {
         wallet.moonlight_execute(
             ContractExec::Call(ContractCall {
-                contract: *contract_id,
+                contract: (*contract_id).into(),
                 fn_name: method.as_ref().to_string().clone(),
                 fn_args: args,
             }),

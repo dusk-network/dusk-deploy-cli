@@ -13,13 +13,24 @@ use alloc::vec::Vec;
 use std::mem;
 
 use dusk_bytes::{Error as BytesError, Serializable};
-use execution_core::transfer::{AccountData, MoonlightPayload, MoonlightTransaction};
 use execution_core::{
-    transfer::{ContractCall, ContractDeploy, ContractExec, Fee, PhoenixPayload, Transaction},
-    BlsPublicKey, BlsScalar, BlsSecretKey, JubJubScalar, Note, PhoenixError, PublicKey,
-    SchnorrSecretKey, SecretKey, TxSkeleton, ViewKey, OUTPUT_NOTES,
+    signatures::{
+        bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
+        schnorr::SecretKey as SchnorrSecretKey,
+    },
+    transfer::{
+        contract_exec::{ContractCall, ContractDeploy, ContractExec},
+        moonlight::{AccountData, Transaction as MoonlightTransaction},
+        phoenix::{
+            Error as PhoenixError, Fee, Note, Payload as PhoenixPayload, PublicKey, SecretKey,
+            ViewKey,
+        },
+        Transaction,
+    },
+    BlsScalar, JubJubScalar,
 };
 use ff::Field;
+use phoenix_core::{TxSkeleton, OUTPUT_NOTES};
 use rand_core::{CryptoRng, Error as RngError, RngCore};
 use rkyv::ser::serializers::{
     AllocScratchError, CompositeSerializerError, SharedSerializeMapError,
@@ -347,23 +358,16 @@ where
         nonce: u64,
         exec: Option<impl Into<ContractExec>>,
     ) -> Result<Transaction, Error<S, SC, PC>> {
-        let from = BlsPublicKey::from(from_sk);
-
-        let payload = MoonlightPayload {
-            from,
+        let mt = MoonlightTransaction::new(
+            from_sk,
             to,
             value,
             deposit,
             gas_limit,
             gas_price,
             nonce,
-            exec: exec.map(Into::into),
-        };
-
-        let digest = payload.to_hash_input_bytes();
-        let signature = from_sk.sign(&from, &digest);
-
-        let mt = MoonlightTransaction::new(payload, signature);
+            exec.map(Into::into),
+        );
 
         self.prover
             .propagate_moonlight_transaction(&mt)

@@ -7,18 +7,24 @@
 use crate::block::Block;
 use crate::Error;
 use dusk_bytes::Serializable;
-use execution_core::transfer::{AccountData, ContractId, TreeLeaf};
-use execution_core::{BlsPublicKey, BlsScalar, Note, ViewKey};
+use execution_core::{
+    signatures::bls::PublicKey as BlsPublicKey,
+    transfer::{
+        moonlight::AccountData,
+        phoenix::{Note, TreeLeaf, ViewKey},
+    },
+    BlsScalar, ContractId,
+};
 use poseidon_merkle::Opening as PoseidonOpening;
 use rusk_http_client::RuskHttpClient;
 use rusk_http_client::{ContractInquirer, StreamAux};
-use std::cmp::max;
-use std::collections::HashMap;
+use std::cmp::{max, Ordering};
+use std::collections::{BTreeSet, HashMap};
 use std::fmt::Debug;
 use std::mem;
 use std::sync::{Arc, RwLock};
 use tracing::info;
-use wallet::StateClient;
+use wallet::{EnrichedNote, StateClient};
 
 const CONTRACT_ID_BYTES: usize = 32;
 
@@ -26,7 +32,7 @@ const CONTRACT_ID_BYTES: usize = 32;
 const fn reserved(b: u8) -> ContractId {
     let mut bytes = [0u8; CONTRACT_ID_BYTES];
     bytes[0] = b;
-    bytes
+    ContractId::from_bytes(bytes)
 }
 
 const TRANSFER_CONTRACT: ContractId = reserved(0x1);
@@ -38,6 +44,35 @@ const TRANSFER_CONTRACT_STR: &str =
 
 const ITEM_LEN: usize = mem::size_of::<TreeLeaf>();
 
+#[derive(Debug, Clone)]
+pub struct NoteBlockHeight(pub Note, pub u64);
+
+impl NoteBlockHeight {
+    pub fn as_enriched_note(&self) -> EnrichedNote {
+        (self.0.clone(), self.1)
+    }
+}
+
+impl PartialOrd<Self> for NoteBlockHeight {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.0.pos().cmp(other.0.pos()))
+    }
+}
+
+impl Ord for NoteBlockHeight {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.pos().cmp(other.0.pos())
+    }
+}
+
+impl PartialEq<Self> for NoteBlockHeight {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.pos() == other.0.pos()
+    }
+}
+
+impl Eq for NoteBlockHeight {}
+
 pub struct DCliStateClient {
     pub client: RuskHttpClient,
     pub cache: Arc<RwLock<HashMap<Vec<u8>, DummyCacheItem>>>,
@@ -46,22 +81,18 @@ pub struct DCliStateClient {
 
 #[derive(Default, Debug, Clone)]
 pub struct DummyCacheItem {
-    notes: Vec<(Note, u64)>,
+    notes: BTreeSet<NoteBlockHeight>,
     last_height: u64,
 }
 
 impl DummyCacheItem {
-    fn add(&mut self, note: Note, block_height: u64) {
-        if !self.notes.contains(&(note.clone(), block_height)) {
-            self.notes.push((note.clone(), block_height));
-            self.last_height = block_height;
+    fn add(&mut self, enriched_note: NoteBlockHeight) {
+        if !self.notes.contains(&enriched_note) {
+            self.last_height = enriched_note.1;
+            self.notes.insert(enriched_note);
         }
     }
 }
-
-pub type BlockHeight = u64;
-
-pub type EnrichedNote = (Note, BlockHeight);
 
 impl DCliStateClient {
     pub fn new(rusk_http_client: RuskHttpClient, start_block_height: u64) -> Self {
@@ -99,22 +130,22 @@ impl StateClient for DCliStateClient {
         let mut stream = ContractInquirer::query_contract_with_feeder(
             &self.client,
             start_height,
-            TRANSFER_CONTRACT,
+            TRANSFER_CONTRACT.to_bytes(),
             "leaves_from_height",
         )
         .wait()?;
         StreamAux::find_items::<TreeLeaf, ITEM_LEN>(
             |leaf| {
                 if vk.owns(leaf.note.stealth_address()) {
-                    response_notes.push((leaf.block_height, leaf.note.clone()))
+                    response_notes.push((leaf.note.clone(), leaf.block_height))
                 }
             },
             &mut stream,
         )?;
 
-        for (block_height, note) in response_notes {
+        for note_block_height in response_notes {
             // Filter out duplicated notes and update the last
-            vk_cache.add(note, block_height)
+            vk_cache.add(NoteBlockHeight(note_block_height.0, note_block_height.1))
         }
         drop(cache_read);
         self.cache
@@ -122,7 +153,11 @@ impl StateClient for DCliStateClient {
             .unwrap()
             .insert(vk.to_bytes().to_vec(), vk_cache.clone());
 
-        Ok(vk_cache.notes)
+        Ok(vk_cache
+            .notes
+            .iter()
+            .map(|nh| nh.as_enriched_note())
+            .collect())
     }
 
     /// Fetch the current anchor of the state.
