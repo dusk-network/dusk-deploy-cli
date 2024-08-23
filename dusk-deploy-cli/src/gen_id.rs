@@ -5,17 +5,22 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use blake2b_simd::{Params, State};
+use execution_core::CONTRACT_ID_BYTES;
 
 /// Generate a [`ContractId`] address from:
 /// - slice of bytes,
 /// - nonce
 /// - owner
 pub fn gen_contract_id(bytes: impl AsRef<[u8]>, nonce: u64, owner: impl AsRef<[u8]>) -> [u8; 32] {
-    let mut hasher = Hasher::new();
+    let mut hasher = Params::new().hash_length(CONTRACT_ID_BYTES).to_state();
     hasher.update(bytes.as_ref());
-    hasher.update(nonce.to_le_bytes());
+    hasher.update(&nonce.to_le_bytes()[..]);
     hasher.update(owner.as_ref());
-    hasher.finalize()
+    hasher
+        .finalize()
+        .as_bytes()
+        .try_into()
+        .expect("the hash result is exactly `CONTRACT_ID_BYTES` long")
 }
 
 /// Hashes scalars and arbitrary slices of bytes using Blake2b, returning an
