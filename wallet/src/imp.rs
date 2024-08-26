@@ -199,6 +199,7 @@ where
 
         let notes = self.state.fetch_notes(&vk).map_err(Error::from_state_err)?;
 
+        // this part is a performance bottleneck and needs caching
         let nullifiers: Vec<_> = notes.iter().map(|(n, _)| n.gen_nullifier(sk)).collect();
 
         let mut existing_nullifiers: Vec<BlsScalar> = vec![];
