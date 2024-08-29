@@ -20,8 +20,8 @@ pub struct Args {
     #[clap(short, long, default_value_t = String::from("spice property autumn primary undo innocent pole legend stereo mom eternal topic"))]
     pub seed: String,
 
-    /// Gas limit [default: `500000000`]
-    #[clap(long, default_value_t = 500000000)]
+    /// Gas limit [default: `600000000`]
+    #[clap(long, default_value_t = 600000000)]
     pub gas_limit: u64,
 
     /// Gas price [default: `1`]

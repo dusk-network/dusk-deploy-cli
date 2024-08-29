@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
         _constructor_args = Some(v);
     }
 
-    let _wallet_index = 0;
+    let wallet_index = 0;
 
     let seed = if moonlight {
         seed_from_bs58(moonlight_sk_bs58)?
@@ -105,13 +105,14 @@ async fn main() -> Result<(), Error> {
         join_set.spawn(async move {
             do_run(
                 index,
-                index + 2000,
+                index + 1,
                 index as u64,
                 &bytecode,
                 &wallet,
                 &blockchain_access_config,
                 gas_limit,
                 gas_price,
+                nonce,
             )
         });
         thread::sleep(std::time::Duration::from_millis(2500))
@@ -133,8 +134,8 @@ fn do_run(
     blockchain_access_config: &BlockchainAccessConfig,
     gas_limit: u64,
     gas_price: u64,
+    nonce: u64,
 ) {
-    let nonce = 0u64;
     let owner = hex::decode("".to_string()).expect("decoding owner should succeed");
     let method = "value";
 
@@ -143,9 +144,15 @@ fn do_run(
         v.push((i % 256) as u8);
         let constructor_args = Some(v);
 
-        // if (nonce + i as u64) < 96 {
+        // if (nonce + i as u64) < 3416 {
         //     continue;
         // }
+
+        let balance_before = wallet
+            .get_balance(wallet_index)
+            .expect("get balance should work")
+            .value;
+        println!("balance before={}", balance_before);
 
         info!("Deploying with nonce {}", nonce + i as u64);
         let result = Executor::deploy_via_phoenix(
@@ -163,6 +170,14 @@ fn do_run(
             Ok(_) => info!("Deployment successful {}", i),
             Err(ref err) => info!("{} when deploying", err),
         }
+
+        let balance_after = wallet
+            .get_balance(wallet_index)
+            .expect("get balance should work")
+            .value;
+        println!("balance after={}", balance_after);
+        let funds_spent = balance_before - balance_after;
+        println!("funds spent = {} dusk spent = {}", funds_spent, funds_spent as f64/1_000_000_000 as f64);
 
         if result.is_ok() {
             let deployed_id = gen_contract_id(bytecode.clone(), nonce + i as u64, owner.clone());
