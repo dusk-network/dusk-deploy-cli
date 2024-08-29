@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
         _constructor_args = Some(v);
     }
 
-    let wallet_index = 0;
+    let _wallet_index = 0;
 
     let seed = if moonlight {
         seed_from_bs58(moonlight_sk_bs58)?

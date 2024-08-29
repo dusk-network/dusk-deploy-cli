@@ -59,6 +59,7 @@ impl Executor {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[allow(dead_code)]
     pub fn deploy_via_moonlight(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         bytecode: &Vec<u8>,
@@ -114,6 +115,7 @@ impl Executor {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn call_via_moonlight(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         contract_id: &ContractId,
