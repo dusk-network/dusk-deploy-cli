@@ -232,24 +232,24 @@ async fn verify_deployment(
     gas_limit: u64,
     gas_price: u64,
 ) {
-    // let random_arg = contract_id[0];
-    // println!(
-    //     "verifying deployment by calling init({}) and value",
-    //     random_arg
-    // );
-    // let method_args = vec![random_arg];
+    let random_arg = contract_id[0];
+    println!(
+        "verifying deployment by calling init({}) and value",
+        random_arg
+    );
+    let method_args = vec![random_arg];
 
-    // let r = Executor::call_via_moonlight(
-    //     &wallet,
-    //     &ContractId::from(contract_id),
-    //     "init",
-    //     method_args,
-    //     wallet_index,
-    //     gas_limit,
-    //     gas_price,
-    // );
-    // println!("moonlight call result={:?}", r);
-    // assert!(r.is_ok(), "moonlight call failed");
+    let r = Executor::call_via_phoenix(
+        &wallet,
+        &ContractId::from(contract_id),
+        "init",
+        method_args,
+        wallet_index,
+        gas_limit,
+        gas_price,
+    );
+    println!("moonlight call result={:?}", r);
+    assert!(r.is_ok(), "moonlight call failed");
 
     let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
     let r = ContractInquirer::query_contract::<(), u8>(
@@ -262,5 +262,5 @@ async fn verify_deployment(
 
     println!("result of calling value: {:?}", r);
 
-    // assert_eq!(r.unwrap(), random_arg);
+    assert_eq!(r.unwrap(), random_arg);
 }
