@@ -10,7 +10,7 @@ use rusk_http_client::{BlockchainInquirer, RuskHttpClient, RuskRequest};
 use rusk_prover::UnprovenTransaction;
 use std::borrow::Cow;
 use std::fmt::Debug;
-use std::thread;
+use std::{mem, thread};
 use tracing::info;
 
 pub struct DCliProverClient {
@@ -57,10 +57,36 @@ impl wallet::ProverClient for DCliProverClient {
         self.status("Proving tx, please wait...");
         let utx_bytes = utx.to_var_bytes();
         let prove_req = RuskRequest::new("prove_execute", utx_bytes);
-        let proof_bytes = self.prover.call(2, "rusk", &prove_req).wait()?;
-        self.status("Proof success!");
-        let proof = Proof::from_slice(&proof_bytes)?;
-        let tx = utx.clone().gen_transaction(proof);
+        let mut proof_bytes = self.prover.call(2, "rusk", &prove_req).wait()?;
+        self.status("Proof success!  {}");
+        println!("xxlen={}", mem::size_of::<Proof>());
+        let proof_orig= Proof::from_slice(&proof_bytes)?;
+        let mut proof= Proof::from_slice(&proof_bytes)?;
+        println!("original proof={:?}", proof_orig);
+        let mut ok = false;
+        for i in 0..100 {
+            for j in 0..255 {
+                proof_bytes[i] = j;
+                let r = Proof::from_slice(&proof_bytes);
+                if r.is_ok() {
+                    proof = r?;
+                    if proof != proof_orig {
+                        ok = true;
+                    } else {
+                        println!("identical proof found");
+                    }
+                }
+                if ok {
+                    break;
+                }
+            }
+            if ok {
+                break;
+            }
+        }
+        self.status("001");
+        let mut tx = utx.clone().gen_transaction(proof);
+        self.status("002");
         let tx = Transaction::Phoenix(tx);
         let tx_bytes = tx.to_var_bytes();
 
