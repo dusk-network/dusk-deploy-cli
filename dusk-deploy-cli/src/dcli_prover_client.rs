@@ -58,11 +58,11 @@ impl wallet::ProverClient for DCliProverClient {
         let utx_bytes = utx.to_var_bytes();
         let prove_req = RuskRequest::new("prove_execute", utx_bytes);
         let mut proof_bytes = self.prover.call(2, "rusk", &prove_req).wait()?;
-        self.status("Proof success!  {}");
-        println!("xxlen={}", mem::size_of::<Proof>());
+        self.status("Proof success!");
+        info!("proof length={}", mem::size_of::<Proof>());
         let proof_orig= Proof::from_slice(&proof_bytes)?;
         let mut proof= Proof::from_slice(&proof_bytes)?;
-        println!("original proof={:?}", proof_orig);
+        // println!("original proof={:?}", proof_orig);
         let mut ok = false;
         for i in 0..100 {
             for j in 0..255 {
@@ -72,8 +72,9 @@ impl wallet::ProverClient for DCliProverClient {
                     proof = r?;
                     if proof != proof_orig {
                         ok = true;
+                        info!("at i={}, j={} found a valid (deserializable) proof which is different than the original proof", i, j);
                     } else {
-                        println!("identical proof found");
+                        info!("at i={}, j={} found identical proof to the orininal (after deserialization)", i, j);
                     }
                 }
                 if ok {
@@ -85,7 +86,7 @@ impl wallet::ProverClient for DCliProverClient {
             }
         }
         self.status("001");
-        let mut tx = utx.clone().gen_transaction(proof);
+        let tx = utx.clone().gen_transaction(proof);
         self.status("002");
         let tx = Transaction::Phoenix(tx);
         let tx_bytes = tx.to_var_bytes();
