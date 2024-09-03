@@ -41,21 +41,21 @@ pub fn gen_contract_id(bytes: impl AsRef<[u8]>, nonce: u64, owner: impl AsRef<[u
 // }
 
 // impl Hasher {
-    // Create new hasher instance.
-    // pub fn new() -> Self {
-    //     Self::default()
-    // }
+// Create new hasher instance.
+// pub fn new() -> Self {
+//     Self::default()
+// }
 
-    // Process data, updating the internal state.
-    // pub fn update(&mut self, data: impl AsRef<[u8]>) {
-    //     self.state.update(data.as_ref());
-    // }
+// Process data, updating the internal state.
+// pub fn update(&mut self, data: impl AsRef<[u8]>) {
+//     self.state.update(data.as_ref());
+// }
 
-    // Retrieve result and consume hasher instance.
-    // pub fn finalize(self) -> [u8; 32] {
-    //     let hash = self.state.finalize();
-    //     let mut a = [0u8; 32];
-    //     a.clone_from_slice(&hash.as_array()[..32]);
-    //     a
-    // }
+// Retrieve result and consume hasher instance.
+// pub fn finalize(self) -> [u8; 32] {
+//     let hash = self.state.finalize();
+//     let mut a = [0u8; 32];
+//     a.clone_from_slice(&hash.as_array()[..32]);
+//     a
+// }
 // }

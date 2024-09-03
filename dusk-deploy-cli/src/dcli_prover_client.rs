@@ -60,29 +60,21 @@ impl wallet::ProverClient for DCliProverClient {
         let mut proof_bytes = self.prover.call(2, "rusk", &prove_req).wait()?;
         self.status("Proof success!");
         info!("proof length={}", mem::size_of::<Proof>());
-        let proof_orig= Proof::from_slice(&proof_bytes)?;
-        let mut proof= Proof::from_slice(&proof_bytes)?;
-        // println!("original proof={:?}", proof_orig);
-        let mut ok = false;
-        for i in 0..100 {
+        let proof_orig = Proof::from_slice(&proof_bytes)?;
+        let mut proof = Proof::from_slice(&proof_bytes)?;
+        'outer: for i in 0..100 {
             for j in 0..255 {
                 proof_bytes[i] = j;
                 let r = Proof::from_slice(&proof_bytes);
                 if r.is_ok() {
                     proof = r?;
                     if proof != proof_orig {
-                        ok = true;
                         info!("at i={}, j={} found a valid (deserializable) proof which is different than the original proof", i, j);
+                        break 'outer;
                     } else {
                         info!("at i={}, j={} found identical proof to the original (after deserialization)", i, j);
                     }
                 }
-                if ok {
-                    break;
-                }
-            }
-            if ok {
-                break;
             }
         }
         self.status("001");
