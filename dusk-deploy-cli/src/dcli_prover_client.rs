@@ -74,7 +74,7 @@ impl wallet::ProverClient for DCliProverClient {
                         ok = true;
                         info!("at i={}, j={} found a valid (deserializable) proof which is different than the original proof", i, j);
                     } else {
-                        info!("at i={}, j={} found identical proof to the orininal (after deserialization)", i, j);
+                        info!("at i={}, j={} found identical proof to the original (after deserialization)", i, j);
                     }
                 }
                 if ok {
