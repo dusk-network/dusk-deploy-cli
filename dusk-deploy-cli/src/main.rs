@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
         _constructor_args = Some(v);
     }
 
-    let wallet_index = 0;
+    let _wallet_index = 0;
 
     let seed = if moonlight {
         seed_from_bs58(moonlight_sk_bs58)?
@@ -177,7 +177,11 @@ fn do_run(
             .value;
         println!("balance after={}", balance_after);
         let funds_spent = balance_before - balance_after;
-        println!("funds spent = {} dusk spent = {}", funds_spent, funds_spent as f64/1_000_000_000 as f64);
+        println!(
+            "funds spent = {} dusk spent = {}",
+            funds_spent,
+            funds_spent as f64 / 1_000_000_000 as f64
+        );
 
         if result.is_ok() {
             let deployed_id = gen_contract_id(bytecode.clone(), nonce + i as u64, owner.clone());

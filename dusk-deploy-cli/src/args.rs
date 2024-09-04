@@ -25,7 +25,7 @@ pub struct Args {
     pub gas_limit: u64,
 
     /// Gas price [default: `1`]
-    #[clap(long, default_value_t = 1)]
+    #[clap(long, default_value_t = 200)]
     pub gas_price: u64,
 
     /// Path to contract code
