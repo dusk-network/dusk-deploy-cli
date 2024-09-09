@@ -15,20 +15,17 @@ use std::mem;
 use dusk_bytes::Error as BytesError;
 use execution_core::transfer::phoenix::{Prove, TxCircuitVec};
 use execution_core::{
-    signatures::{
-        bls::{PublicKey as BlsPublicKey /*, SecretKey as BlsSecretKey*/},
-        /* schnorr::SecretKey as SchnorrSecretKey,*/
-    },
+    signatures::bls::PublicKey as BlsPublicKey,
     transfer::{
         data::{ContractCall, ContractDeploy, TransactionData},
-        moonlight::{AccountData /*Transaction as MoonlightTransaction*/},
-        phoenix::{/*Fee,*/ Note, /*Payload as PhoenixPayload, */ PublicKey, SecretKey, ViewKey,},
+        moonlight::AccountData,
+        phoenix::{Note, PublicKey, SecretKey, ViewKey},
         Transaction,
     },
     BlsScalar, JubJubScalar,
 };
 use ff::Field;
-use phoenix_core::{/*TxSkeleton,*/ OUTPUT_NOTES};
+use phoenix_core::OUTPUT_NOTES;
 use rand_core::{CryptoRng, Error as RngError, RngCore};
 use rkyv::ser::serializers::{
     AllocScratchError, CompositeSerializerError, SharedSerializeMapError,
@@ -347,21 +344,8 @@ where
             })
             .collect();
 
-        // let fee = Fee::new(rng, &sender_pk, gas_limit, gas_price);
         let contract_call =
             exec.maybe_phoenix_exec(rng, inputs.iter().map(|(n, _)| n.clone()).collect());
-
-        // let utx = new_unproven_tx(
-        //     rng,
-        //     &self.state,
-        //     sender_sk,
-        //     inputs,
-        //     outputs,
-        //     fee,
-        //     deposit,
-        //     contract_call,
-        // )
-        // .map_err(Error::from_state_err)?;
 
         let root = self
             .state
@@ -572,76 +556,6 @@ where
         Ok(account)
     }
 }
-
-// Creates an unproven transaction that conforms to the transfer contract.
-// #[allow(clippy::too_many_arguments)]
-// fn new_unproven_tx<Rng: RngCore + CryptoRng, SC: StateClient>(
-//     rng: &mut Rng,
-//     state: &SC,
-//     sender_sk: &SecretKey,
-//     inputs: Vec<(Note, u64, JubJubScalar)>,
-//     outputs: [(Note, u64, JubJubScalar, [JubJubScalar; 2]); OUTPUT_NOTES],
-//     fee: Fee,
-//     deposit: u64,
-//     exec: Option<impl Into<TransactionData>>,
-// ) -> Result<UnprovenTransaction, SC::Error> {
-//     let nullifiers: Vec<BlsScalar> = inputs
-//         .iter()
-//         .map(|(note, _, _)| note.gen_nullifier(sender_sk))
-//         .collect();
-//
-//     let mut openings = Vec::with_capacity(inputs.len());
-//     for (note, _, _) in &inputs {
-//         let opening = state.fetch_opening(note)?;
-//         openings.push(opening);
-//     }
-//
-//     let root = state.fetch_anchor()?;
-//
-//     let tx_skeleton = TxSkeleton {
-//         root,
-//         nullifiers,
-//         outputs: [outputs[0].0.clone(), outputs[1].0.clone()],
-//         max_fee: fee.max_fee(),
-//         deposit,
-//     };
-//
-//     let payload = PhoenixPayload {
-//         tx_skeleton,
-//         fee,
-//         exec: exec.map(Into::into),
-//     };
-//     let payload_hash = payload.hash();
-//
-//     let inputs: Vec<UnprovenTransactionInput> = inputs
-//         .into_iter()
-//         .zip(openings)
-//         .map(|((note, value, value_blinder), opening)| {
-//             UnprovenTransactionInput::new(
-//                 rng,
-//                 sender_sk,
-//                 note,
-//                 value,
-//                 value_blinder,
-//                 opening,
-//                 payload_hash,
-//             )
-//         })
-//         .collect();
-//
-//     let schnorr_sk_a = SchnorrSecretKey::from(sender_sk.a());
-//     let sig_a = schnorr_sk_a.sign(rng, payload_hash);
-//     let schnorr_sk_b = SchnorrSecretKey::from(sender_sk.b());
-//     let sig_b = schnorr_sk_b.sign(rng, payload_hash);
-//
-//     Ok(UnprovenTransaction {
-//         inputs,
-//         outputs,
-//         payload,
-//         sender_pk: PublicKey::from(sender_sk),
-//         signatures: (sig_a, sig_b),
-//     })
-// }
 
 /// Optionally produces contract calls/executions for Phoenix transactions.
 trait MaybePhoenixExec<R> {

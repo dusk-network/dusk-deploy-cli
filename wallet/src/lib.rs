@@ -26,13 +26,11 @@ use execution_core::{
     },
     BlsScalar,
 };
-// use poseidon_merkle::Opening as PoseidonOpening;
 use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use sha2::{Digest, Sha256};
 
 pub use imp::*;
-// pub use rusk_prover::UnprovenTransaction;
 
 /// The maximum size of call data.
 pub const MAX_CALL_SIZE: usize = 65536;
