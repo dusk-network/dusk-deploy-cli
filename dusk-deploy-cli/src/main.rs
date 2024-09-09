@@ -252,8 +252,8 @@ async fn verify_deployment(
         gas_limit,
         gas_price,
     );
-    println!("moonlight call result={:?}", r);
-    assert!(r.is_ok(), "moonlight call failed");
+    println!("phoenix call result={:?}", r);
+    assert!(r.is_ok(), "phoenix call failed");
 
     let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
     let r = ContractInquirer::query_contract::<(), u8>(

@@ -7,8 +7,8 @@
 use crate::dcli_prover_client::DCliProverClient;
 use crate::dcli_state_client::DCliStateClient;
 use crate::dcli_store::DCliStore;
-use execution_core::transfer::contract_exec::{
-    ContractBytecode, ContractCall, ContractDeploy, ContractExec,
+use execution_core::transfer::data::{
+    ContractBytecode, ContractCall, ContractDeploy, TransactionData,
 };
 use rand::prelude::*;
 use rand::rngs::StdRng;
@@ -30,7 +30,7 @@ impl Executor {
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         bytecode: &Vec<u8>,
         owner: &[u8],
-        constructor_args: Option<Vec<u8>>,
+        init_args: Option<Vec<u8>>,
         nonce: u64,
         wallet_index: u64,
         gas_limit: u64,
@@ -40,13 +40,13 @@ impl Executor {
         let hash = bytecode_hash(bytecode.as_slice());
         wallet.phoenix_execute(
             &mut rng,
-            ContractExec::Deploy(ContractDeploy {
+            TransactionData::Deploy(ContractDeploy {
                 bytecode: ContractBytecode {
                     hash,
                     bytes: bytecode.clone(),
                 },
                 owner: owner.to_vec(),
-                constructor_args,
+                init_args,
                 nonce,
             }),
             wallet_index,
@@ -58,35 +58,35 @@ impl Executor {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn deploy_via_moonlight(
-        wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
-        bytecode: &Vec<u8>,
-        owner: &[u8],
-        constructor_args: Option<Vec<u8>>,
-        nonce: u64,
-        wallet_index: u64,
-        gas_limit: u64,
-        gas_price: u64,
-    ) -> Result<(), Error> {
-        let hash = bytecode_hash(bytecode.as_slice());
-        wallet.moonlight_execute(
-            ContractExec::Deploy(ContractDeploy {
-                bytecode: ContractBytecode {
-                    hash,
-                    bytes: bytecode.clone(),
-                },
-                owner: owner.to_vec(),
-                constructor_args,
-                nonce,
-            }),
-            wallet_index,
-            gas_limit,
-            gas_price,
-        )?;
-
-        Ok(())
-    }
+    // #[allow(clippy::too_many_arguments)]
+    // pub fn deploy_via_moonlight(
+    //     wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
+    //     bytecode: &Vec<u8>,
+    //     owner: &[u8],
+    //     init_args: Option<Vec<u8>>,
+    //     nonce: u64,
+    //     wallet_index: u64,
+    //     gas_limit: u64,
+    //     gas_price: u64,
+    // ) -> Result<(), Error> {
+    //     let hash = bytecode_hash(bytecode.as_slice());
+    //     wallet.moonlight_execute(
+    //         TransactionData::Deploy(ContractDeploy {
+    //             bytecode: ContractBytecode {
+    //                 hash,
+    //                 bytes: bytecode.clone(),
+    //             },
+    //             owner: owner.to_vec(),
+    //             init_args,
+    //             nonce,
+    //         }),
+    //         wallet_index,
+    //         gas_limit,
+    //         gas_price,
+    //     )?;
+    //
+    //     Ok(())
+    // }
 
     pub fn call_via_phoenix(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
@@ -100,7 +100,7 @@ impl Executor {
         let mut rng = StdRng::seed_from_u64(0xcafe);
         wallet.phoenix_execute(
             &mut rng,
-            ContractExec::Call(ContractCall {
+            TransactionData::Call(ContractCall {
                 contract: (*contract_id).into(),
                 fn_name: method.as_ref().to_string().clone(),
                 fn_args: args,
@@ -114,26 +114,26 @@ impl Executor {
         Ok(())
     }
 
-    pub fn call_via_moonlight(
-        wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
-        contract_id: &ContractId,
-        method: impl AsRef<str>,
-        args: Vec<u8>,
-        wallet_index: u64,
-        gas_limit: u64,
-        gas_price: u64,
-    ) -> Result<(), Error> {
-        wallet.moonlight_execute(
-            ContractExec::Call(ContractCall {
-                contract: (*contract_id).into(),
-                fn_name: method.as_ref().to_string().clone(),
-                fn_args: args,
-            }),
-            wallet_index,
-            gas_limit,
-            gas_price,
-        )?;
-
-        Ok(())
-    }
+    // pub fn call_via_moonlight(
+    //     wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
+    //     contract_id: &ContractId,
+    //     method: impl AsRef<str>,
+    //     args: Vec<u8>,
+    //     wallet_index: u64,
+    //     gas_limit: u64,
+    //     gas_price: u64,
+    // ) -> Result<(), Error> {
+    //     wallet.moonlight_execute(
+    //         TransactionData::Call(ContractCall {
+    //             contract: (*contract_id).into(),
+    //             fn_name: method.as_ref().to_string().clone(),
+    //             fn_args: args,
+    //         }),
+    //         wallet_index,
+    //         gas_limit,
+    //         gas_price,
+    //     )?;
+    //
+    //     Ok(())
+    // }
 }

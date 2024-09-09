@@ -16,22 +16,23 @@ mod imp;
 
 use alloc::vec::Vec;
 use dusk_bytes::{DeserializableSlice, Serializable, Write};
+use execution_core::transfer::phoenix::NoteOpening;
 use execution_core::{
     signatures::bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
     transfer::{
         moonlight::{AccountData, Transaction as MoonlightTransaction},
-        phoenix::{Note, SecretKey, ViewKey, NOTES_TREE_DEPTH},
+        phoenix::{Note, SecretKey, Transaction as PhoenixTransaction, ViewKey},
         Transaction,
     },
     BlsScalar,
 };
-use poseidon_merkle::Opening as PoseidonOpening;
+// use poseidon_merkle::Opening as PoseidonOpening;
 use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use sha2::{Digest, Sha256};
 
 pub use imp::*;
-pub use rusk_prover::UnprovenTransaction;
+// pub use rusk_prover::UnprovenTransaction;
 
 /// The maximum size of call data.
 pub const MAX_CALL_SIZE: usize = 65536;
@@ -139,7 +140,7 @@ pub trait ProverClient {
     /// Requests that a node prove the given transaction and later propagates it
     fn compute_proof_and_propagate(
         &self,
-        utx: &UnprovenTransaction,
+        utx: &PhoenixTransaction,
     ) -> Result<Transaction, Self::Error>;
 
     /// Propagates the Moonlight transaction
@@ -174,10 +175,7 @@ pub trait StateClient {
     ) -> Result<Vec<BlsScalar>, Self::Error>;
 
     /// Queries the node to find the opening for a specific note.
-    fn fetch_opening(
-        &self,
-        note: &Note,
-    ) -> Result<PoseidonOpening<(), NOTES_TREE_DEPTH>, Self::Error>;
+    fn fetch_opening(&self, note: &Note) -> Result<NoteOpening, Self::Error>;
 
     // Queries the node for the stake of a key. If the key has no stake, a
     // `Default` stake info should be returned.
@@ -185,6 +183,9 @@ pub trait StateClient {
 
     /// Queries the account data for a given key.
     fn fetch_account(&self, pk: &BlsPublicKey) -> Result<AccountData, Self::Error>;
+
+    /// Provides chain id
+    fn fetch_chain_id(&self) -> Result<u8, Self::Error>;
 }
 
 /// Information about the balance of a particular key.

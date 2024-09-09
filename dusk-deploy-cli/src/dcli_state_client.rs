@@ -7,15 +7,15 @@
 use crate::block::Block;
 use crate::Error;
 use dusk_bytes::Serializable;
+use execution_core::transfer::phoenix::{NoteLeaf, NoteOpening};
 use execution_core::{
     signatures::bls::PublicKey as BlsPublicKey,
     transfer::{
         moonlight::AccountData,
-        phoenix::{Note, TreeLeaf, ViewKey},
+        phoenix::{Note, ViewKey},
     },
     BlsScalar, ContractId,
 };
-use poseidon_merkle::Opening as PoseidonOpening;
 use rusk_http_client::RuskHttpClient;
 use rusk_http_client::{ContractInquirer, StreamAux};
 use std::cmp::{max, Ordering};
@@ -37,12 +37,10 @@ const fn reserved(b: u8) -> ContractId {
 
 const TRANSFER_CONTRACT: ContractId = reserved(0x1);
 
-const POSEIDON_TREE_DEPTH: usize = 17;
-
 const TRANSFER_CONTRACT_STR: &str =
     "0100000000000000000000000000000000000000000000000000000000000000";
 
-const ITEM_LEN: usize = mem::size_of::<TreeLeaf>();
+const ITEM_LEN: usize = mem::size_of::<NoteLeaf>();
 
 #[derive(Debug, Clone)]
 pub struct NoteBlockHeight(pub Note, pub u64);
@@ -134,7 +132,7 @@ impl StateClient for DCliStateClient {
             "leaves_from_height",
         )
         .wait()?;
-        StreamAux::find_items::<TreeLeaf, ITEM_LEN>(
+        StreamAux::find_items::<NoteLeaf, ITEM_LEN>(
             |leaf| {
                 if vk.owns(leaf.note.stealth_address()) {
                     response_notes.push((leaf.note.clone(), leaf.block_height))
@@ -191,10 +189,7 @@ impl StateClient for DCliStateClient {
     }
 
     /// Queries the node to find the opening for a specific note.
-    fn fetch_opening(
-        &self,
-        note: &Note,
-    ) -> Result<PoseidonOpening<(), POSEIDON_TREE_DEPTH>, Self::Error> {
+    fn fetch_opening(&self, note: &Note) -> Result<NoteOpening, Self::Error> {
         let data = self
             .client
             .contract_query::<_, 1024>(TRANSFER_CONTRACT_STR, "opening", note.pos())
@@ -212,5 +207,16 @@ impl StateClient for DCliStateClient {
 
         let account = rkyv::from_bytes(&data).map_err(|_| Error::Rkyv)?;
         Ok(account)
+    }
+
+    fn fetch_chain_id(&self) -> Result<u8, Error> {
+        let data = self
+            .client
+            .contract_query::<_, { u8::SIZE }>(TRANSFER_CONTRACT_STR, "chain_id", &())
+            .wait()?;
+
+        let res: u8 = rkyv::from_bytes(&data).map_err(|_| Error::Rkyv)?;
+
+        Ok(res)
     }
 }
