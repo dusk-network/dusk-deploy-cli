@@ -114,26 +114,26 @@ impl Executor {
         Ok(())
     }
 
-    // pub fn call_via_moonlight(
-    //     wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
-    //     contract_id: &ContractId,
-    //     method: impl AsRef<str>,
-    //     args: Vec<u8>,
-    //     wallet_index: u64,
-    //     gas_limit: u64,
-    //     gas_price: u64,
-    // ) -> Result<(), Error> {
-    //     wallet.moonlight_execute(
-    //         TransactionData::Call(ContractCall {
-    //             contract: (*contract_id).into(),
-    //             fn_name: method.as_ref().to_string().clone(),
-    //             fn_args: args,
-    //         }),
-    //         wallet_index,
-    //         gas_limit,
-    //         gas_price,
-    //     )?;
-    //
-    //     Ok(())
-    // }
+    pub fn call_via_moonlight(
+        wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
+        contract_id: &ContractId,
+        method: impl AsRef<str>,
+        args: Vec<u8>,
+        wallet_index: u64,
+        gas_limit: u64,
+        gas_price: u64,
+    ) -> Result<(), Error> {
+        wallet.moonlight_execute(
+            TransactionData::Call(ContractCall {
+                contract: (*contract_id).into(),
+                fn_name: method.as_ref().to_string().clone(),
+                fn_args: args,
+            }),
+            wallet_index,
+            gas_limit,
+            gas_price,
+        )?;
+
+        Ok(())
+    }
 }

@@ -238,22 +238,22 @@ async fn verify_deployment(
 ) {
     let random_arg = contract_id[0];
     println!(
-        "verifying deployment by calling init({}) and value",
+        "verifying deployment by calling reset({}) and value",
         random_arg
     );
     let method_args = vec![random_arg];
 
-    let r = Executor::call_via_phoenix(
+    let r = Executor::call_via_moonlight(
         &wallet,
         &ContractId::from(contract_id),
-        "init",
+        "reset",
         method_args,
         wallet_index,
         gas_limit,
         gas_price,
     );
-    println!("phoenix call result={:?}", r);
-    assert!(r.is_ok(), "phoenix call failed");
+    println!("moonlight call result={:?}", r);
+    assert!(r.is_ok(), "moonlight call failed");
 
     let client = RuskHttpClient::new(rusk_url.as_ref().to_string());
     let r = ContractInquirer::query_contract::<(), u8>(

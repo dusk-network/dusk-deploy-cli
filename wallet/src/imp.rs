@@ -12,13 +12,13 @@ use alloc::string::FromUtf8Error;
 use alloc::vec::Vec;
 use std::mem;
 
-use dusk_bytes::Error as BytesError;
+use dusk_bytes::{Error as BytesError, Serializable};
 use execution_core::transfer::phoenix::{Prove, TxCircuitVec};
 use execution_core::{
-    signatures::bls::PublicKey as BlsPublicKey,
+    signatures::bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
     transfer::{
         data::{ContractCall, ContractDeploy, TransactionData},
-        moonlight::AccountData,
+        moonlight::{AccountData, Transaction as MoonlightTransaction},
         phoenix::{Note, PublicKey, SecretKey, ViewKey},
         Transaction,
     },
@@ -377,33 +377,35 @@ where
             .map_err(Error::from_prover_err)
     }
 
-    // #[allow(clippy::too_many_arguments)]
-    // fn moonlight_transaction(
-    //     &self,
-    //     from_sk: &BlsSecretKey,
-    //     to: Option<BlsPublicKey>,
-    //     value: u64,
-    //     deposit: u64,
-    //     gas_limit: u64,
-    //     gas_price: u64,
-    //     nonce: u64,
-    //     exec: Option<impl Into<TransactionData>>,
-    // ) -> Result<Transaction, Error<S, SC, PC>> {
-    //     let mt = MoonlightTransaction::new(
-    //         from_sk,
-    //         to,
-    //         value,
-    //         deposit,
-    //         gas_limit,
-    //         gas_price,
-    //         nonce,
-    //         exec.map(Into::into),
-    //     );
-    //
-    //     self.prover
-    //         .propagate_moonlight_transaction(&mt)
-    //         .map_err(Error::<S, SC, PC>::from_prover_err) // todo: naming should no longer be about prover
-    // }
+    #[allow(clippy::too_many_arguments)]
+    fn moonlight_transaction(
+        &self,
+        from_sk: &BlsSecretKey,
+        to: Option<BlsPublicKey>,
+        value: u64,
+        deposit: u64,
+        gas_limit: u64,
+        gas_price: u64,
+        nonce: u64,
+        chain_id: u8,
+        exec: Option<impl Into<TransactionData>>,
+    ) -> Result<Transaction, Error<S, SC, PC>> {
+        let mt = MoonlightTransaction::new(
+            from_sk,
+            to,
+            value,
+            deposit,
+            gas_limit,
+            gas_price,
+            nonce,
+            chain_id,
+            exec.map(Into::into),
+        )?;
+
+        self.prover
+            .propagate_moonlight_transaction(&mt)
+            .map_err(Error::<S, SC, PC>::from_prover_err) // todo: naming should no longer be about prover
+    }
 
     /// Execute a generic contract call or deployment, using Phoenix notes to
     /// pay for gas.
@@ -438,56 +440,58 @@ where
         )
     }
 
-    // Execute a generic contract call or deployment, using Moonlight to
-    // pay for gas.
-    // #[allow(clippy::too_many_arguments)]
-    // pub fn moonlight_execute(
-    //     &self,
-    //     exec: impl Into<TransactionData>,
-    //     sender_index: u64,
-    //     gas_limit: u64,
-    //     gas_price: u64,
-    // ) -> Result<Transaction, Error<S, SC, PC>> {
-    //     let moonlight_sk: BlsSecretKey = self
-    //         .store
-    //         .fetch_account_secret_key(sender_index)
-    //         .map_err(Error::from_store_err)?;
-    //     let moonlight_pk = BlsPublicKey::from(&moonlight_sk);
-    //     let acc_data = self
-    //         .state
-    //         .fetch_account(&moonlight_pk)
-    //         .map_err(Error::from_state_err)?;
-    //
-    //     println!(
-    //         "account {} fetched: {:?}",
-    //         bs58::encode(moonlight_pk.to_bytes()).into_string(),
-    //         acc_data
-    //     );
-    //
-    //     let x = self.moonlight_transaction(
-    //         &moonlight_sk,
-    //         None,
-    //         0,
-    //         0,
-    //         gas_limit,
-    //         gas_price,
-    //         acc_data.nonce + 1,
-    //         Some(exec.into()),
-    //     );
-    //
-    //     let acc_data = self
-    //         .state
-    //         .fetch_account(&moonlight_pk)
-    //         .map_err(Error::from_state_err)?;
-    //
-    //     println!(
-    //         "account {} fetched2: {:?}",
-    //         bs58::encode(moonlight_pk.to_bytes()).into_string(),
-    //         acc_data
-    //     );
-    //
-    //     x
-    // }
+    /// Execute a generic contract call or deployment, using Moonlight to
+    /// pay for gas.
+    #[allow(clippy::too_many_arguments)]
+    pub fn moonlight_execute(
+        &self,
+        exec: impl Into<TransactionData>,
+        sender_index: u64,
+        gas_limit: u64,
+        gas_price: u64,
+    ) -> Result<Transaction, Error<S, SC, PC>> {
+        let moonlight_sk: BlsSecretKey = self
+            .store
+            .fetch_account_secret_key(sender_index)
+            .map_err(Error::from_store_err)?;
+        let moonlight_pk = BlsPublicKey::from(&moonlight_sk);
+        let acc_data = self
+            .state
+            .fetch_account(&moonlight_pk)
+            .map_err(Error::from_state_err)?;
+        let chain_id = self.state.fetch_chain_id().map_err(Error::from_state_err)?;
+
+        println!(
+            "account {} fetched: {:?}",
+            bs58::encode(moonlight_pk.to_bytes()).into_string(),
+            acc_data
+        );
+
+        let x = self.moonlight_transaction(
+            &moonlight_sk,
+            None,
+            0,
+            0,
+            gas_limit,
+            gas_price,
+            acc_data.nonce + 1,
+            chain_id,
+            Some(exec.into()),
+        );
+
+        let acc_data = self
+            .state
+            .fetch_account(&moonlight_pk)
+            .map_err(Error::from_state_err)?;
+
+        println!(
+            "account {} fetched2: {:?}",
+            bs58::encode(moonlight_pk.to_bytes()).into_string(),
+            acc_data
+        );
+
+        x
+    }
 
     /// Transfer Dusk in the form of Phoenix notes from one key to another.
     #[allow(clippy::too_many_arguments)]
