@@ -58,35 +58,35 @@ impl Executor {
         Ok(())
     }
 
-    // #[allow(clippy::too_many_arguments)]
-    // pub fn deploy_via_moonlight(
-    //     wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
-    //     bytecode: &Vec<u8>,
-    //     owner: &[u8],
-    //     init_args: Option<Vec<u8>>,
-    //     nonce: u64,
-    //     wallet_index: u64,
-    //     gas_limit: u64,
-    //     gas_price: u64,
-    // ) -> Result<(), Error> {
-    //     let hash = bytecode_hash(bytecode.as_slice());
-    //     wallet.moonlight_execute(
-    //         TransactionData::Deploy(ContractDeploy {
-    //             bytecode: ContractBytecode {
-    //                 hash,
-    //                 bytes: bytecode.clone(),
-    //             },
-    //             owner: owner.to_vec(),
-    //             init_args,
-    //             nonce,
-    //         }),
-    //         wallet_index,
-    //         gas_limit,
-    //         gas_price,
-    //     )?;
-    //
-    //     Ok(())
-    // }
+    #[allow(clippy::too_many_arguments)]
+    pub fn deploy_via_moonlight(
+        wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
+        bytecode: &Vec<u8>,
+        owner: &[u8],
+        init_args: Option<Vec<u8>>,
+        nonce: u64,
+        wallet_index: u64,
+        gas_limit: u64,
+        gas_price: u64,
+    ) -> Result<(), Error> {
+        let hash = bytecode_hash(bytecode.as_slice());
+        wallet.moonlight_execute(
+            TransactionData::Deploy(ContractDeploy {
+                bytecode: ContractBytecode {
+                    hash,
+                    bytes: bytecode.clone(),
+                },
+                owner: owner.to_vec(),
+                init_args,
+                nonce,
+            }),
+            wallet_index,
+            gas_limit,
+            gas_price,
+        )?;
+
+        Ok(())
+    }
 
     pub fn call_via_phoenix(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
