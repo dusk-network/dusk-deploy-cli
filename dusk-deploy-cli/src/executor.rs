@@ -26,6 +26,7 @@ pub struct Executor;
 
 impl Executor {
     #[allow(clippy::too_many_arguments)]
+    #[allow(dead_code)]
     pub fn deploy_via_phoenix(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         bytecode: &Vec<u8>,
@@ -59,6 +60,7 @@ impl Executor {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[allow(dead_code)]
     pub fn deploy_via_moonlight(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         bytecode: &Vec<u8>,
