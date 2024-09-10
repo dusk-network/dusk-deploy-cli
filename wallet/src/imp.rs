@@ -467,7 +467,7 @@ where
             acc_data
         );
 
-        let x = self.moonlight_transaction(
+        let result = self.moonlight_transaction(
             &moonlight_sk,
             None,
             0,
@@ -485,12 +485,12 @@ where
             .map_err(Error::from_state_err)?;
 
         println!(
-            "account {} fetched2: {:?}",
+            "account {} fetched: {:?}",
             bs58::encode(moonlight_pk.to_bytes()).into_string(),
             acc_data
         );
 
-        x
+        result
     }
 
     /// Transfer Dusk in the form of Phoenix notes from one key to another.

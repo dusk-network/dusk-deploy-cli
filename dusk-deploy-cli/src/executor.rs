@@ -88,6 +88,7 @@ impl Executor {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn call_via_phoenix(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         contract_id: &ContractId,
@@ -114,6 +115,7 @@ impl Executor {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn call_via_moonlight(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
         contract_id: &ContractId,
