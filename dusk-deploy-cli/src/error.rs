@@ -34,9 +34,6 @@ pub enum Error {
     /// Bytes Serialization Errors
     #[error("Serialization error occurred: {0:?}")]
     Serialization(Arc<dusk_bytes::Error>),
-    /// Prover Errors
-    #[error("Prover error occurred: {0}")]
-    Prover(Arc<rusk_prover::ProverError>),
     /// Wallet Errors
     #[error("Wallet error occurred: {0}")]
     Wallet(Arc<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>>),
@@ -72,12 +69,6 @@ impl From<reqwest::Error> for Error {
 impl From<dusk_bytes::Error> for Error {
     fn from(err: dusk_bytes::Error) -> Self {
         Self::Serialization(Arc::from(err))
-    }
-}
-
-impl From<rusk_prover::ProverError> for Error {
-    fn from(err: rusk_prover::ProverError) -> Self {
-        Error::Prover(Arc::from(err))
     }
 }
 
