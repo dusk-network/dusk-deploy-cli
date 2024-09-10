@@ -1,13 +1,11 @@
 use crate::block::Block;
 use crate::Error;
-use dusk_bytes::DeserializableSlice;
-use dusk_plonk::prelude::Proof;
+use execution_core::transfer::phoenix::Transaction as PhoenixTransaction;
 use execution_core::{
     transfer::{moonlight::Transaction as MoonlightTransaction, Transaction},
     BlsScalar,
 };
 use rusk_http_client::{BlockchainInquirer, RuskHttpClient, RuskRequest};
-use rusk_prover::UnprovenTransaction;
 use std::borrow::Cow;
 use std::fmt::Debug;
 use std::thread;
@@ -52,15 +50,15 @@ impl wallet::ProverClient for DCliProverClient {
     /// Requests that a node prove the given transaction and later propagates it
     fn compute_proof_and_propagate(
         &self,
-        utx: &UnprovenTransaction,
+        utx: &PhoenixTransaction,
     ) -> Result<Transaction, Self::Error> {
         self.status("Proving tx, please wait...");
-        let utx_bytes = utx.to_var_bytes();
+        let utx_bytes = utx.proof().to_vec();
         let prove_req = RuskRequest::new("prove_execute", utx_bytes);
         let proof_bytes = self.prover.call(2, "rusk", &prove_req).wait()?;
         self.status("Proof success!");
-        let proof = Proof::from_slice(&proof_bytes)?;
-        let tx = utx.clone().gen_transaction(proof);
+        let mut tx = utx.clone(); // todo: clone
+        tx.set_proof(proof_bytes);
         let tx = Transaction::Phoenix(tx);
         let tx_bytes = tx.to_var_bytes();
 

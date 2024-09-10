@@ -4,7 +4,7 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use crate::{BalanceInfo, ProverClient, StateClient, Store, MAX_CALL_SIZE};
+use crate::{BalanceInfo, PhoenixTransaction, ProverClient, StateClient, Store, MAX_CALL_SIZE};
 
 use core::convert::Infallible;
 
@@ -13,30 +13,24 @@ use alloc::vec::Vec;
 use std::mem;
 
 use dusk_bytes::{Error as BytesError, Serializable};
+use execution_core::transfer::phoenix::{Prove, TxCircuitVec};
 use execution_core::{
-    signatures::{
-        bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
-        schnorr::SecretKey as SchnorrSecretKey,
-    },
+    signatures::bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
     transfer::{
-        contract_exec::{ContractCall, ContractDeploy, ContractExec},
+        data::{ContractCall, ContractDeploy, TransactionData},
         moonlight::{AccountData, Transaction as MoonlightTransaction},
-        phoenix::{
-            Error as PhoenixError, Fee, Note, Payload as PhoenixPayload, PublicKey, SecretKey,
-            ViewKey,
-        },
+        phoenix::{Note, PublicKey, SecretKey, ViewKey},
         Transaction,
     },
     BlsScalar, JubJubScalar,
 };
 use ff::Field;
-use phoenix_core::{TxSkeleton, OUTPUT_NOTES};
+use phoenix_core::OUTPUT_NOTES;
 use rand_core::{CryptoRng, Error as RngError, RngCore};
 use rkyv::ser::serializers::{
     AllocScratchError, CompositeSerializerError, SharedSerializeMapError,
 };
 use rkyv::validation::validators::CheckDeserializeError;
-use rusk_prover::{UnprovenTransaction, UnprovenTransactionInput};
 
 const MAX_INPUT_NOTES: usize = 4;
 
@@ -69,8 +63,11 @@ pub enum Error<S: Store, SC: StateClient, PC: ProverClient> {
     #[error(transparent)]
     Utf8(FromUtf8Error),
     /// Originating from the transaction model.
-    #[error("Phoenix error occurred: {0}")]
-    Phoenix(PhoenixError),
+    #[error("Transaction model error occurred: {0}")]
+    Phoenix(execution_core::Error),
+    /// Originating from Phoenix Core.
+    #[error("Phoenix core error occurred: {0}")]
+    PhoenixCore(phoenix_core::Error),
     /// Not enough balance to perform transaction.
     #[error("Not enough balance")]
     NotEnoughBalance,
@@ -127,8 +124,8 @@ impl<S: Store, SC: StateClient, PC: ProverClient> From<FromUtf8Error> for Error<
     }
 }
 
-impl<S: Store, SC: StateClient, PC: ProverClient> From<PhoenixError> for Error<S, SC, PC> {
-    fn from(pe: PhoenixError) -> Self {
+impl<S: Store, SC: StateClient, PC: ProverClient> From<execution_core::Error> for Error<S, SC, PC> {
+    fn from(pe: execution_core::Error) -> Self {
         Self::Phoenix(pe)
     }
 }
@@ -169,6 +166,17 @@ impl<S, SC, PC> Wallet<S, SC, PC> {
     }
 }
 
+struct DummyProver();
+
+impl Prove for DummyProver {
+    fn prove(tx_circuit_vec_bytes: &[u8]) -> Result<Vec<u8>, execution_core::Error> {
+        Ok(TxCircuitVec::from_slice(tx_circuit_vec_bytes)
+            .expect("serialization should be ok")
+            .to_var_bytes()
+            .to_vec())
+    }
+}
+
 impl<S, SC, PC> Wallet<S, SC, PC>
 where
     S: Store,
@@ -199,6 +207,7 @@ where
 
         let notes = self.state.fetch_notes(&vk).map_err(Error::from_state_err)?;
 
+        // this part is a performance bottleneck and needs caching
         let nullifiers: Vec<_> = notes.iter().map(|(n, _)| n.gen_nullifier(sk)).collect();
 
         let mut existing_nullifiers: Vec<BlsScalar> = vec![];
@@ -251,8 +260,10 @@ where
 
         let mut accumulated_value = 0;
         for note in notes.into_iter() {
-            let val = note.value(Some(&sender_vk))?;
-            let value_blinder = note.value_blinder(Some(&sender_vk))?;
+            let val = note.value(Some(&sender_vk)).map_err(Error::PhoenixCore)?;
+            let value_blinder = note
+                .value_blinder(Some(&sender_vk))
+                .map_err(Error::PhoenixCore)?;
 
             accumulated_value += val;
             notes_and_values.push((note, val, value_blinder));
@@ -315,7 +326,7 @@ where
     {
         let sender_pk = PublicKey::from(sender_sk);
 
-        let (inputs, outputs) = self.inputs_and_change_output(
+        let (inputs, _outputs) = self.inputs_and_change_output(
             rng,
             sender_sk,
             &sender_pk,
@@ -325,21 +336,41 @@ where
             deposit,
         )?;
 
-        let fee = Fee::new(rng, &sender_pk, gas_limit, gas_price);
-        let contract_call =
-            exec.maybe_phoenix_exec(rng, inputs.iter().map(|(n, _, _)| n.clone()).collect());
+        let inputs: Vec<_> = inputs
+            .iter()
+            .map(|(note, _, _)| {
+                let opening = self.state.fetch_opening(&note).unwrap(); // todo: unwrap
+                (note.clone(), opening)
+            })
+            .collect();
 
-        let utx = new_unproven_tx(
+        let contract_call =
+            exec.maybe_phoenix_exec(rng, inputs.iter().map(|(n, _)| n.clone()).collect());
+
+        let root = self
+            .state
+            .fetch_anchor()
+            .map_err(|e| Error::from_state_err(e))?;
+        let chain_id = self
+            .state
+            .fetch_chain_id()
+            .map_err(|e| Error::from_state_err(e))?;
+
+        let utx = PhoenixTransaction::new::<Rng, DummyProver>(
             rng,
-            &self.state,
-            sender_sk,
+            &sender_sk,
+            &sender_pk,
+            &receiver_pk,
             inputs,
-            outputs,
-            fee,
+            root,
+            0,
+            true,
             deposit,
+            gas_limit,
+            gas_price,
+            chain_id,
             contract_call,
-        )
-        .map_err(Error::from_state_err)?;
+        )?;
 
         self.prover
             .compute_proof_and_propagate(&utx)
@@ -356,7 +387,8 @@ where
         gas_limit: u64,
         gas_price: u64,
         nonce: u64,
-        exec: Option<impl Into<ContractExec>>,
+        chain_id: u8,
+        exec: Option<impl Into<TransactionData>>,
     ) -> Result<Transaction, Error<S, SC, PC>> {
         let mt = MoonlightTransaction::new(
             from_sk,
@@ -366,8 +398,9 @@ where
             gas_limit,
             gas_price,
             nonce,
+            chain_id,
             exec.map(Into::into),
-        );
+        )?;
 
         self.prover
             .propagate_moonlight_transaction(&mt)
@@ -380,7 +413,7 @@ where
     pub fn phoenix_execute<Rng>(
         &self,
         rng: &mut Rng,
-        exec: impl Into<ContractExec>,
+        exec: impl Into<TransactionData>,
         sender_index: u64,
         gas_limit: u64,
         gas_price: u64,
@@ -412,7 +445,7 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn moonlight_execute(
         &self,
-        exec: impl Into<ContractExec>,
+        exec: impl Into<TransactionData>,
         sender_index: u64,
         gas_limit: u64,
         gas_price: u64,
@@ -426,6 +459,7 @@ where
             .state
             .fetch_account(&moonlight_pk)
             .map_err(Error::from_state_err)?;
+        let chain_id = self.state.fetch_chain_id().map_err(Error::from_state_err)?;
 
         println!(
             "account {} fetched: {:?}",
@@ -433,7 +467,7 @@ where
             acc_data
         );
 
-        self.moonlight_transaction(
+        let result = self.moonlight_transaction(
             &moonlight_sk,
             None,
             0,
@@ -441,8 +475,22 @@ where
             gas_limit,
             gas_price,
             acc_data.nonce + 1,
+            chain_id,
             Some(exec.into()),
-        )
+        );
+
+        let acc_data = self
+            .state
+            .fetch_account(&moonlight_pk)
+            .map_err(Error::from_state_err)?;
+
+        println!(
+            "account {} fetched: {:?}",
+            bs58::encode(moonlight_pk.to_bytes()).into_string(),
+            acc_data
+        );
+
+        result
     }
 
     /// Transfer Dusk in the form of Phoenix notes from one key to another.
@@ -485,7 +533,7 @@ where
         let mut values = Vec::with_capacity(notes.len());
 
         for note in notes.into_iter() {
-            values.push(note.value(Some(&vk))?);
+            values.push(note.value(Some(&vk)).map_err(Error::PhoenixCore)?);
         }
         values.sort_by(|a, b| b.cmp(a));
 
@@ -513,102 +561,32 @@ where
     }
 }
 
-/// Creates an unproven transaction that conforms to the transfer contract.
-#[allow(clippy::too_many_arguments)]
-fn new_unproven_tx<Rng: RngCore + CryptoRng, SC: StateClient>(
-    rng: &mut Rng,
-    state: &SC,
-    sender_sk: &SecretKey,
-    inputs: Vec<(Note, u64, JubJubScalar)>,
-    outputs: [(Note, u64, JubJubScalar, [JubJubScalar; 2]); OUTPUT_NOTES],
-    fee: Fee,
-    deposit: u64,
-    exec: Option<impl Into<ContractExec>>,
-) -> Result<UnprovenTransaction, SC::Error> {
-    let nullifiers: Vec<BlsScalar> = inputs
-        .iter()
-        .map(|(note, _, _)| note.gen_nullifier(sender_sk))
-        .collect();
-
-    let mut openings = Vec::with_capacity(inputs.len());
-    for (note, _, _) in &inputs {
-        let opening = state.fetch_opening(note)?;
-        openings.push(opening);
-    }
-
-    let root = state.fetch_anchor()?;
-
-    let tx_skeleton = TxSkeleton {
-        root,
-        nullifiers,
-        outputs: [outputs[0].0.clone(), outputs[1].0.clone()],
-        max_fee: fee.max_fee(),
-        deposit,
-    };
-
-    let payload = PhoenixPayload {
-        tx_skeleton,
-        fee,
-        exec: exec.map(Into::into),
-    };
-    let payload_hash = payload.hash();
-
-    let inputs: Vec<UnprovenTransactionInput> = inputs
-        .into_iter()
-        .zip(openings)
-        .map(|((note, value, value_blinder), opening)| {
-            UnprovenTransactionInput::new(
-                rng,
-                sender_sk,
-                note,
-                value,
-                value_blinder,
-                opening,
-                payload_hash,
-            )
-        })
-        .collect();
-
-    let schnorr_sk_a = SchnorrSecretKey::from(sender_sk.a());
-    let sig_a = schnorr_sk_a.sign(rng, payload_hash);
-    let schnorr_sk_b = SchnorrSecretKey::from(sender_sk.b());
-    let sig_b = schnorr_sk_b.sign(rng, payload_hash);
-
-    Ok(UnprovenTransaction {
-        inputs,
-        outputs,
-        payload,
-        sender_pk: PublicKey::from(sender_sk),
-        signatures: (sig_a, sig_b),
-    })
-}
-
 /// Optionally produces contract calls/executions for Phoenix transactions.
 trait MaybePhoenixExec<R> {
-    fn maybe_phoenix_exec(self, rng: &mut R, inputs: Vec<Note>) -> Option<ContractExec>;
+    fn maybe_phoenix_exec(self, rng: &mut R, inputs: Vec<Note>) -> Option<TransactionData>;
 }
 
-impl<R> MaybePhoenixExec<R> for Option<ContractExec> {
-    fn maybe_phoenix_exec(self, _rng: &mut R, _inputs: Vec<Note>) -> Option<ContractExec> {
+impl<R> MaybePhoenixExec<R> for Option<TransactionData> {
+    fn maybe_phoenix_exec(self, _rng: &mut R, _inputs: Vec<Note>) -> Option<TransactionData> {
         self
     }
 }
 
-impl<R> MaybePhoenixExec<R> for ContractExec {
-    fn maybe_phoenix_exec(self, _rng: &mut R, _inputs: Vec<Note>) -> Option<ContractExec> {
+impl<R> MaybePhoenixExec<R> for TransactionData {
+    fn maybe_phoenix_exec(self, _rng: &mut R, _inputs: Vec<Note>) -> Option<TransactionData> {
         Some(self)
     }
 }
 
 impl<R> MaybePhoenixExec<R> for ContractCall {
-    fn maybe_phoenix_exec(self, _rng: &mut R, _inputs: Vec<Note>) -> Option<ContractExec> {
-        Some(ContractExec::Call(self))
+    fn maybe_phoenix_exec(self, _rng: &mut R, _inputs: Vec<Note>) -> Option<TransactionData> {
+        Some(TransactionData::Call(self))
     }
 }
 
 impl<R> MaybePhoenixExec<R> for ContractDeploy {
-    fn maybe_phoenix_exec(self, _rng: &mut R, _inputs: Vec<Note>) -> Option<ContractExec> {
-        Some(ContractExec::Deploy(self))
+    fn maybe_phoenix_exec(self, _rng: &mut R, _inputs: Vec<Note>) -> Option<TransactionData> {
+        Some(TransactionData::Deploy(self))
     }
 }
 
@@ -617,7 +595,7 @@ where
     F: FnOnce(&mut R, Vec<Note>) -> M,
     M: MaybePhoenixExec<R>,
 {
-    fn maybe_phoenix_exec(self, rng: &mut R, inputs: Vec<Note>) -> Option<ContractExec> {
+    fn maybe_phoenix_exec(self, rng: &mut R, inputs: Vec<Note>) -> Option<TransactionData> {
         // NOTE: it may be (pun intended) possible to get rid of this clone if
         // we use a lifetime into a slice of `Note`s. However, it comes at the
         // cost of clarity. This is more important here, since this is testing
