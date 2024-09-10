@@ -57,7 +57,7 @@ impl wallet::ProverClient for DCliProverClient {
         let prove_req = RuskRequest::new("prove_execute", utx_bytes);
         let proof_bytes = self.prover.call(2, "rusk", &prove_req).wait()?;
         self.status("Proof success!");
-        let mut tx = utx.clone(); // todo: clone
+        let mut tx = utx.clone();
         tx.set_proof(proof_bytes);
         let tx = Transaction::Phoenix(tx);
         let tx_bytes = tx.to_var_bytes();

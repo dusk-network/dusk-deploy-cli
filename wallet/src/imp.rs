@@ -13,7 +13,7 @@ use alloc::vec::Vec;
 use std::mem;
 
 use dusk_bytes::{Error as BytesError, Serializable};
-use execution_core::transfer::phoenix::{Prove, TxCircuitVec};
+use execution_core::transfer::phoenix::{NoteOpening, Prove, TxCircuitVec};
 use execution_core::{
     signatures::bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
     transfer::{
@@ -336,13 +336,14 @@ where
             deposit,
         )?;
 
-        let inputs: Vec<_> = inputs
-            .iter()
+        let inputs: Result<Vec<(Note, NoteOpening)>, SC::Error> = inputs
+            .into_iter()
             .map(|(note, _, _)| {
-                let opening = self.state.fetch_opening(&note).unwrap(); // todo: unwrap
-                (note.clone(), opening)
+                let opening = self.state.fetch_opening(&note)?;
+                Ok::<(Note, NoteOpening), SC::Error>((note.clone(), opening))
             })
             .collect();
+        let inputs: Vec<(Note, NoteOpening)> = inputs.map_err(Error::from_state_err)?;
 
         let contract_call =
             exec.maybe_phoenix_exec(rng, inputs.iter().map(|(n, _)| n.clone()).collect());
