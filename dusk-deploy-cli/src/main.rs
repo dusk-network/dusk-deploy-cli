@@ -93,7 +93,7 @@ async fn main() -> Result<(), Error> {
 
     let mut join_set = JoinSet::new();
 
-    for index in 0..1 {
+    for index in 20..28 {
         let bytecode = bytecode.clone();
         let wallet = WalletBuilder::build(
             blockchain_access_config.rusk_address.clone(),
@@ -104,8 +104,8 @@ async fn main() -> Result<(), Error> {
         let blockchain_access_config = blockchain_access_config.clone();
         join_set.spawn(async move {
             do_run(
-                index,
-                index + 1,
+                index * 250,
+                index * 250 + 250,
                 index as u64,
                 &bytecode,
                 &wallet,
@@ -155,7 +155,7 @@ fn do_run(
         println!("balance before={}", balance_before);
 
         info!("Deploying with nonce {}", nonce + i as u64);
-        let result = Executor::deploy_via_phoenix(
+        let result = Executor::deploy_via_moonlight(
             &wallet,
             &bytecode.clone(),
             &owner.clone(),
@@ -198,7 +198,7 @@ fn do_run(
                     method,
                     wallet_index,
                     gas_limit,
-                    gas_price,
+                    gas_price / 100,
                 )
                 .wait();
             }
