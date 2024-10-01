@@ -93,7 +93,7 @@ async fn main() -> Result<(), Error> {
 
     let mut join_set = JoinSet::new();
 
-    for index in 20..28 {
+    for index in 0..1 {
         let bytecode = bytecode.clone();
         let wallet = WalletBuilder::build(
             blockchain_access_config.rusk_address.clone(),
@@ -105,7 +105,7 @@ async fn main() -> Result<(), Error> {
         join_set.spawn(async move {
             do_run(
                 index * 250,
-                index * 250 + 250,
+                index * 250 + 1,
                 index as u64,
                 &bytecode,
                 &wallet,
@@ -148,11 +148,11 @@ fn do_run(
         //     continue;
         // }
 
-        let balance_before = wallet
-            .get_balance(wallet_index)
-            .expect("get balance should work")
-            .value;
-        println!("balance before={}", balance_before);
+        // let balance_before = wallet
+        //     .get_balance(wallet_index)
+        //     .expect("get balance should work")
+        //     .value;
+        // println!("balance before={}", balance_before);
 
         info!("Deploying with nonce {}", nonce + i as u64);
         let result = Executor::deploy_via_moonlight(
@@ -171,24 +171,23 @@ fn do_run(
             Err(ref err) => info!("{} when deploying", err),
         }
 
-        let balance_after = wallet
-            .get_balance(wallet_index)
-            .expect("get balance should work")
-            .value;
-        println!("balance after={}", balance_after);
-        let funds_spent = balance_before - balance_after;
-        println!(
-            "funds spent = {} dusk spent = {}",
-            funds_spent,
-            funds_spent as f64 / 1_000_000_000 as f64
-        );
+        // let balance_after = wallet
+        //     .get_balance(wallet_index)
+        //     .expect("get balance should work")
+        //     .value;
+        // println!("balance after={}", balance_after);
+        // let funds_spent = balance_before - balance_after;
+        // println!(
+        //     "funds spent = {} dusk spent = {}",
+        //     funds_spent,
+        //     funds_spent as f64 / 1_000_000_000 as f64
+        // );
 
         if result.is_ok() {
             let deployed_id = gen_contract_id(bytecode.clone(), nonce + i as u64, owner.clone());
             info!("Deployed contract id: {}", hex::encode(&deployed_id));
 
             println!("verification {}", i);
-            // thread::sleep(std::time::Duration::from_secs(15));
 
             if !method.is_empty() {
                 verify_deployment(
@@ -198,7 +197,7 @@ fn do_run(
                     method,
                     wallet_index,
                     gas_limit,
-                    gas_price / 100,
+                    gas_price / ((i as u64 % 100) + 50),
                 )
                 .wait();
             }

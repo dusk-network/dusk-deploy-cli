@@ -21,7 +21,7 @@ pub struct Args {
     pub seed: String,
 
     /// Gas limit [default: `500000000`]
-    #[clap(long, default_value_t = 500000000)]
+    #[clap(long, default_value_t = 50000000)]
     pub gas_limit: u64,
 
     /// Gas price [default: `1`]

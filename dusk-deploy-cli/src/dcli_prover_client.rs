@@ -108,7 +108,7 @@ impl wallet::ProverClient for DCliProverClient {
         let tx_id = BlsScalar::hash_to_scalar(tx.to_hash_input_bytes().as_slice());
         let tx_id_str = hex::encode(tx_id.to_bytes());
         info!("Transaction id = {}", tx_id_str);
-        for _ in 0..60 {
+        for _ in 0..180 {
             let r = BlockchainInquirer::retrieve_tx_err(tx_id_str.clone(), &self.state).wait();
             if r.is_ok() {
                 return match r.unwrap() {
@@ -116,7 +116,7 @@ impl wallet::ProverClient for DCliProverClient {
                     None => Ok(tx),
                 };
             }
-            thread::sleep(std::time::Duration::from_secs(3));
+            thread::sleep(std::time::Duration::from_secs(1));
         }
         Err(Error::Propagate("Transaction timed out".into()))
     }
