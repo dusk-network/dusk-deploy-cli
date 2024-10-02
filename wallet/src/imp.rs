@@ -169,7 +169,7 @@ impl<S, SC, PC> Wallet<S, SC, PC> {
 struct DummyProver();
 
 impl Prove for DummyProver {
-    fn prove(tx_circuit_vec_bytes: &[u8]) -> Result<Vec<u8>, execution_core::Error> {
+    fn prove(&self, tx_circuit_vec_bytes: &[u8]) -> Result<Vec<u8>, execution_core::Error> {
         Ok(TxCircuitVec::from_slice(tx_circuit_vec_bytes)
             .expect("serialization should be ok")
             .to_var_bytes()
@@ -357,6 +357,7 @@ where
             .fetch_chain_id()
             .map_err(|e| Error::from_state_err(e))?;
 
+        let dummy_prover = DummyProver();
         let utx = PhoenixTransaction::new::<Rng, DummyProver>(
             rng,
             &sender_sk,
@@ -371,6 +372,7 @@ where
             gas_price,
             chain_id,
             contract_call,
+            &dummy_prover,
         )?;
 
         self.prover
