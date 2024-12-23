@@ -22,7 +22,7 @@ thiserror = "1.0"
 rand = "^0.8"
 
 # rusk dependencies
-execution-core = { version = "0.1.0", path = "../../../rust/rusk/execution-core" }
+execution-core = { version = "0.1.0", path = "../../../rust2/rusk/execution-core" }
 
 [dev-dependencies]
 rand = "^0.8"

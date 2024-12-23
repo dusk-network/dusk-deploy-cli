@@ -85,6 +85,7 @@ impl Executor {
             wallet_index,
             gas_limit,
             gas_price,
+            true,
         )?;
 
         Ok(())
@@ -136,6 +137,7 @@ impl Executor {
             wallet_index,
             gas_limit,
             gas_price,
+            true,
         )?;
 
         Ok(())

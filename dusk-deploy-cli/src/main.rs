@@ -93,7 +93,13 @@ async fn main() -> Result<(), Error> {
 
     let mut join_set = JoinSet::new();
 
-    for index in 0..1 {
+    for index in 0..8 {
+    // for index in 8..16 {
+    //         for index in 16..24 {
+    //         for index in 24..32 {
+    //         for index in 32..40 {
+    //         for index in 40..48 {
+    //         for index in 48..56 {
         let bytecode = bytecode.clone();
         let wallet = WalletBuilder::build(
             blockchain_access_config.rusk_address.clone(),
@@ -104,8 +110,8 @@ async fn main() -> Result<(), Error> {
         let blockchain_access_config = blockchain_access_config.clone();
         join_set.spawn(async move {
             do_run(
-                index * 250,
-                index * 250 + 1,
+                index * 1000,
+                index * 1000 + 80,
                 index as u64,
                 &bytecode,
                 &wallet,

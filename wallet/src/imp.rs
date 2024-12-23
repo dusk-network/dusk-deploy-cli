@@ -452,6 +452,7 @@ where
         sender_index: u64,
         gas_limit: u64,
         gas_price: u64,
+        show_spent: bool,
     ) -> Result<Transaction, Error<S, SC, PC>> {
         let moonlight_sk: BlsSecretKey = self
             .store
@@ -464,11 +465,14 @@ where
             .map_err(Error::from_state_err)?;
         let chain_id = self.state.fetch_chain_id().map_err(Error::from_state_err)?;
 
-        println!(
-            "account {} fetched: {:?}",
-            bs58::encode(moonlight_pk.to_bytes()).into_string(),
-            acc_data
-        );
+        if show_spent {
+            println!(
+                "account {} fetched: {:?}",
+                bs58::encode(moonlight_pk.to_bytes()).into_string(),
+                acc_data
+            );
+        }
+        let balance_before = acc_data.balance;
 
         let result = self.moonlight_transaction(
             &moonlight_sk,
@@ -487,11 +491,15 @@ where
             .fetch_account(&moonlight_pk)
             .map_err(Error::from_state_err)?;
 
-        println!(
-            "account {} fetched: {:?}",
-            bs58::encode(moonlight_pk.to_bytes()).into_string(),
-            acc_data
-        );
+        if show_spent {
+            println!(
+                "account {} fetched: {:?}",
+                bs58::encode(moonlight_pk.to_bytes()).into_string(),
+                acc_data
+            );
+            let balance_after = acc_data.balance;
+            println!("moonlight funds spent: {}", balance_before - balance_after);
+        }
 
         result
     }
