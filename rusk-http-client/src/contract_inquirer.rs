@@ -8,7 +8,7 @@ use crate::bc_types::MAX_CALL_SIZE;
 use crate::block::BlockInPlace;
 use crate::error::Error;
 use crate::Error::InvalidQueryResponse;
-use crate::{RuskHttpClient, RuskRequest};
+use crate::{CONTRACTS_TARGET, RuskHttpClient};
 use bytecheck::CheckBytes;
 use bytes::Bytes;
 use rkyv::validation::validators::DefaultValidator;
@@ -34,7 +34,7 @@ impl ContractInquirer {
     {
         let contract_id = hex::encode(contract_id.as_slice());
         let response = client
-            .contract_query::<A, MAX_CALL_SIZE>(contract_id.as_ref(), method.as_ref(), &args)
+            .contract_query(contract_id, method.as_ref(), &args)
             .await?;
 
         let response_data = check_archived_root::<R>(response.as_slice())
@@ -63,9 +63,10 @@ impl ContractInquirer {
             .to_vec();
         let stream = client
             .call_raw(
-                1,
-                contract_id.as_ref(),
-                &RuskRequest::new(method.as_ref(), req),
+                CONTRACTS_TARGET,
+                contract_id,
+                method.as_ref(),
+                &req,
                 true,
             )
             .wait()?

@@ -187,7 +187,7 @@ fn do_run(
 
         match result {
             Ok(_) => info!("Deployment successful {}", i),
-            Err(ref err) => info!("{} when deploying", err),
+            Err(ref err) => info!("'{}' - when deploying", err),
         }
 
         // let balance_after = wallet
