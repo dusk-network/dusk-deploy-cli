@@ -7,15 +7,16 @@
 use crate::block::Block;
 use crate::Error;
 use dusk_bytes::Serializable;
-use execution_core::transfer::phoenix::{NoteLeaf, NoteOpening};
-use execution_core::{
+use dusk_core::transfer::phoenix::{NoteLeaf, NoteOpening};
+use dusk_core::{
     signatures::bls::PublicKey as BlsPublicKey,
     transfer::{
         moonlight::AccountData,
         phoenix::{Note, ViewKey},
     },
-    BlsScalar, ContractId,
+    BlsScalar,
 };
+use piecrust_uplink::ContractId;
 use rusk_http_client::RuskHttpClient;
 use rusk_http_client::{ContractInquirer, StreamAux};
 use std::cmp::{max, Ordering};
@@ -128,7 +129,7 @@ impl StateClient for DCliStateClient {
         let mut stream = ContractInquirer::query_contract_with_feeder(
             &self.client,
             start_height,
-            TRANSFER_CONTRACT.to_bytes(),
+            TRANSFER_CONTRACT,
             "leaves_from_height",
         )
         .wait()?;

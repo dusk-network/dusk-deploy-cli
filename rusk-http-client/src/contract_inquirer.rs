@@ -8,13 +8,12 @@ use crate::bc_types::MAX_CALL_SIZE;
 use crate::block::BlockInPlace;
 use crate::error::Error;
 use crate::Error::InvalidQueryResponse;
-use crate::{RuskHttpClient, RuskRequest};
+use crate::{RuskHttpClient, CONTRACTS_TARGET};
 use bytecheck::CheckBytes;
 use bytes::Bytes;
+use piecrust_uplink::ContractId;
 use rkyv::validation::validators::DefaultValidator;
 use rkyv::{check_archived_root, Archive, Deserialize, Infallible};
-
-pub type ContractId = [u8; 32];
 
 pub struct ContractInquirer {}
 
@@ -32,9 +31,9 @@ impl ContractInquirer {
         R: Archive,
         R::Archived: Deserialize<R, Infallible> + for<'b> CheckBytes<DefaultValidator<'b>>,
     {
-        let contract_id = hex::encode(contract_id.as_slice());
+        let contract_id = hex::encode(contract_id.as_bytes());
         let response = client
-            .contract_query::<A, MAX_CALL_SIZE>(contract_id.as_ref(), method.as_ref(), &args)
+            .contract_query(contract_id, method.as_ref(), &args)
             .await?;
 
         let response_data = check_archived_root::<R>(response.as_slice())
@@ -57,16 +56,18 @@ impl ContractInquirer {
         A: Archive,
         A: rkyv::Serialize<rkyv::ser::serializers::AllocSerializer<MAX_CALL_SIZE>>,
     {
-        let contract_id = hex::encode(contract_id.as_slice());
+        let contract_id = hex::encode(contract_id.as_bytes());
         let req = rkyv::to_bytes(&args)
             .expect("Serializing should be infallible")
             .to_vec();
         let stream = client
             .call_raw(
-                1,
-                contract_id.as_ref(),
-                &RuskRequest::new(method.as_ref(), req),
+                CONTRACTS_TARGET,
+                contract_id,
+                method.as_ref(),
+                &req,
                 true,
+                false,
             )
             .wait()?
             .bytes_stream();

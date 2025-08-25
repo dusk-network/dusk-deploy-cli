@@ -5,14 +5,14 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use serde::{Deserialize, Serialize};
-use toml_base_config::BaseConfig;
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
-pub struct BlockchainAccessConfig {
-    pub rusk_address: String,
-    pub prover_address: String,
+pub struct DacCliConfig {
+    pub blockchain_access: BlockchainAccess,
 }
 
-impl BaseConfig for BlockchainAccessConfig {
-    const PACKAGE: &'static str = env!("CARGO_PKG_NAME");
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+pub struct BlockchainAccess {
+    pub rusk_address: String,
+    pub prover_address: String,
 }

@@ -48,6 +48,7 @@ async fn main() -> Result<(), Error> {
     let gas_price = cli.gas_price;
     let contract_path = cli.contract_path.as_path();
     let owner = cli.owner;
+    let wallet_index = cli.wallet_index;
     let nonce = cli.nonce;
     let args = cli.args;
     let mut start_bh = cli.block_height;
@@ -67,54 +68,42 @@ async fn main() -> Result<(), Error> {
         constructor_args = Some(v);
     }
 
-    let wallet_index = 0;
 
     let seed = if moonlight {
-        seed_from_bs58(moonlight_sk_bs58)?
+        Bs58Util::to_seed(moonlight_sk_bs58)?
     } else {
-        seed_from_phrase(seed_phrase)?
+        SeedUtil::seed_from_phrase(seed_phrase)?
     };
 
     let owner = hex::decode(owner).expect("decoding owner should succeed");
 
     if !moonlight && rel_bh != 0 {
-        let client = RuskHttpClient::new(blockchain_access_config.rusk_address.clone());
+        let client = RuskHttpClient::new(dac_cli_config.blockchain_access.rusk_address.clone());
         if let Ok(cur_bh) = BlockchainInquirer::block_height(&client).wait() {
             start_bh = cur_bh - min(cur_bh, rel_bh);
         }
     }
 
     let wallet = WalletBuilder::build(
-        blockchain_access_config.rusk_address.clone(),
-        blockchain_access_config.clone().prover_address,
+        dac_cli_config.blockchain_access.rusk_address.clone(),
+        dac_cli_config.blockchain_access.prover_address.clone(),
         &seed,
         start_bh,
     )?;
 
-    let result = if moonlight {
-        Executor::deploy_via_moonlight(
-            &wallet,
-            &bytecode,
-            &owner,
-            constructor_args,
-            nonce,
-            wallet_index,
-            gas_limit,
-            gas_price,
-        )
-    } else {
-        Executor::deploy_via_phoenix(
-            &wallet,
-            &bytecode,
-            &owner,
-            constructor_args,
-            nonce,
-            wallet_index,
-            gas_limit,
-            gas_price,
-        )
-    };
-
+    let contract_id = deploy(
+        wallet_index,
+        &wallet,
+        &bytecode,
+        &driver_bytecode,
+        &owner_bytes,
+        nonce,
+        deploy_gas_limit,
+        deploy_gas_price,
+        &client,
+        &deploy_data,
+    )
+    .wait()?;
     match result {
         Ok(_) => info!("Deployment successful"),
         Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
@@ -128,20 +117,68 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-// converts seed phrase into a binary seed
-fn seed_from_phrase(phrase: impl AsRef<str>) -> Result<[u8; 64], Error> {
-    let mnemonic = Mnemonic::from_phrase(phrase.as_ref(), Language::English)
-        .map_err(|_| Error::InvalidMnemonicPhrase)?;
-    let seed_obj = Seed::new(&mnemonic, "");
-    let mut seed = [0u8; 64];
-    seed.copy_from_slice(seed_obj.as_bytes());
-    Ok(seed)
-}
+async fn deploy(
+    wallet_index: u64,
+    wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
+    bytecode: &[u8],
+    driver_bytecode: &[u8],
+    owner: &[u8],
+    nonce: u64,
+    gas_limit: u64,
+    gas_price: u64,
+    client: &RuskHttpClient,
+    deploy_data: &DacDeployData,
+) -> Result<ContractId, Error> {
+    let contract_id = DacDeployer::get_contract_id(&bytecode, nonce, owner);
 
-// converts base 58 string into a binary seed
-fn seed_from_bs58(bs58_str: impl AsRef<str>) -> Result<[u8; 64], Error> {
-    let v = bs58::decode(bs58_str.as_ref()).into_vec()?;
-    let mut seed = [0u8; 64];
-    seed[0..32].copy_from_slice(&v);
-    Ok(seed)
+    let r = ContractInquirer::query_contract::<Vec<u8>, u64>(
+        &client,
+        owner.to_vec(),
+        contract_id,
+        "get_balance",
+    )
+    .await;
+
+    let mut already_exists = false;
+    if let Ok(_) = r {
+        info!(
+            "Contract already exists: {}",
+            hex::encode(contract_id.as_bytes())
+        );
+        already_exists = true;
+    }
+
+    if !already_exists {
+        info!("Deploying with nonce {}", nonce as u64);
+        let result = DacDeployer::deploy(
+            &wallet,
+            &bytecode,
+            &owner,
+            wallet_index,
+            nonce,
+            gas_limit,
+            gas_price,
+            deploy_data,
+        );
+
+        let _result = match result {
+            Ok((existed, Some(contract_id))) => {
+                if existed {
+                    info!(
+                        "Contract already exists: {}",
+                        hex::encode(contract_id.as_bytes())
+                    );
+                } else {
+                    info!(
+                        "Deployment successful: {}",
+                        hex::encode(contract_id.as_bytes())
+                    );
+                }
+                Ok(contract_id)
+            }
+            Ok((_, None)) => Err(Deploy("Could not determine contract id".into())),
+            Err(err) => Err(err),
+        };
+    }
+    Ok(contract_id)
 }

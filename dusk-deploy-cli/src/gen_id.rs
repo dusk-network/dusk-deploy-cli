@@ -5,7 +5,7 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use blake2b_simd::Params;
-use execution_core::CONTRACT_ID_BYTES;
+use piecrust_uplink::CONTRACT_ID_BYTES;
 
 /// Generate a [`ContractId`] address from:
 /// - slice of bytes,

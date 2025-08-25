@@ -4,7 +4,7 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use crate::{Error, QueryResult, RuskHttpClient, RuskRequest, SpentTxResponse};
+use crate::{Error, QueryResult, RuskHttpClient, SpentTxResponse};
 use std::borrow::Cow;
 
 pub struct BlockchainInquirer;
@@ -37,7 +37,8 @@ impl BlockchainInquirer {
         client: &RuskHttpClient,
         query: impl AsRef<str>,
     ) -> Result<Vec<u8>, Error> {
-        let request = RuskRequest::new("gql", query.as_ref().as_bytes().to_vec());
-        client.call(2, "Chain", &request).await
+        client
+            .call("graphql", "", "query", query.as_ref().as_bytes())
+            .await
     }
 }

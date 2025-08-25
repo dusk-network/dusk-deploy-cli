@@ -7,12 +7,10 @@
 use crate::dcli_prover_client::DCliProverClient;
 use crate::dcli_state_client::DCliStateClient;
 use crate::dcli_store::DCliStore;
-use execution_core::transfer::data::{
-    ContractBytecode, ContractCall, ContractDeploy, TransactionData,
-};
+use dusk_core::transfer::data::{ContractBytecode, ContractCall, ContractDeploy, TransactionData};
+use piecrust_uplink::ContractId;
 use rand::prelude::*;
 use rand::rngs::StdRng;
-use rusk_http_client::ContractId;
 use wallet::Wallet;
 
 use crate::Error;
@@ -63,7 +61,7 @@ impl Executor {
     #[allow(dead_code)]
     pub fn deploy_via_moonlight(
         wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
-        bytecode: &Vec<u8>,
+        bytecode: &[u8],
         owner: &[u8],
         init_args: Option<Vec<u8>>,
         nonce: u64,
@@ -71,12 +69,12 @@ impl Executor {
         gas_limit: u64,
         gas_price: u64,
     ) -> Result<(), Error> {
-        let hash = bytecode_hash(bytecode.as_slice());
+        let hash = bytecode_hash(bytecode);
         wallet.moonlight_execute(
             TransactionData::Deploy(ContractDeploy {
                 bytecode: ContractBytecode {
                     hash,
-                    bytes: bytecode.clone(),
+                    bytes: bytecode.to_vec(),
                 },
                 owner: owner.to_vec(),
                 init_args,
@@ -85,6 +83,9 @@ impl Executor {
             wallet_index,
             gas_limit,
             gas_price,
+            true,
+            "deployment",
+            0u64,
         )?;
 
         Ok(())
@@ -104,7 +105,7 @@ impl Executor {
         wallet.phoenix_execute(
             &mut rng,
             TransactionData::Call(ContractCall {
-                contract: (*contract_id).into(),
+                contract: *contract_id,
                 fn_name: method.as_ref().to_string().clone(),
                 fn_args: args,
             }),
@@ -123,19 +124,24 @@ impl Executor {
         contract_id: &ContractId,
         method: impl AsRef<str>,
         args: Vec<u8>,
-        wallet_index: u64,
+        wallet_sender_index: u64,
         gas_limit: u64,
         gas_price: u64,
+        info_comment: impl AsRef<str>,
+        deposit: u64,
     ) -> Result<(), Error> {
         wallet.moonlight_execute(
             TransactionData::Call(ContractCall {
-                contract: (*contract_id).into(),
+                contract: *contract_id,
                 fn_name: method.as_ref().to_string().clone(),
                 fn_args: args,
             }),
-            wallet_index,
+            wallet_sender_index,
             gas_limit,
             gas_price,
+            true,
+            info_comment,
+            deposit,
         )?;
 
         Ok(())

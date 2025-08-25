@@ -35,6 +35,10 @@ pub struct Args {
     /// Hexadecimal string of contract's owner [default: ``]
     #[clap(short, long, default_value_t = String::from(""))]
     pub owner: String,
+    
+    /// Index of wallet account to be used as DAC owner [default: `0`]
+    #[clap(long, default_value_t = 0)]
+    pub wallet_index: u64,
 
     /// Nonce [default: `0`]
     #[clap(short, long, default_value_t = 0)]

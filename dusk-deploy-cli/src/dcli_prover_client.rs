@@ -1,11 +1,11 @@
 use crate::block::Block;
 use crate::Error;
-use execution_core::transfer::phoenix::Transaction as PhoenixTransaction;
-use execution_core::{
+use dusk_core::transfer::phoenix::Transaction as PhoenixTransaction;
+use dusk_core::{
     transfer::{moonlight::Transaction as MoonlightTransaction, Transaction},
     BlsScalar,
 };
-use rusk_http_client::{BlockchainInquirer, RuskHttpClient, RuskRequest};
+use rusk_http_client::{BlockchainInquirer, RuskHttpClient};
 use std::borrow::Cow;
 use std::fmt::Debug;
 use std::thread;
@@ -54,8 +54,10 @@ impl wallet::ProverClient for DCliProverClient {
     ) -> Result<Transaction, Self::Error> {
         self.status("Proving tx, please wait...");
         let utx_bytes = utx.proof().to_vec();
-        let prove_req = RuskRequest::new("prove_execute", utx_bytes);
-        let proof_bytes = self.prover.call(2, "rusk", &prove_req).wait()?;
+        let proof_bytes = self
+            .prover
+            .call("transactions", "", "prove", &utx_bytes)
+            .wait()?;
         self.status("Proof success!");
         let mut tx = utx.clone();
         tx.set_proof(proof_bytes);
@@ -63,19 +65,23 @@ impl wallet::ProverClient for DCliProverClient {
         let tx_bytes = tx.to_var_bytes();
 
         self.status("Attempt to preverify tx...");
-        let preverify_req = RuskRequest::new("preverify", tx_bytes.clone());
-        let _ = self.state.call(2, "rusk", &preverify_req).wait()?;
+        let _ = self
+            .state
+            .call("transactions", "", "preverify", &tx_bytes)
+            .wait()?;
         self.status("Preverify success!");
 
         self.status("Propagating tx...");
-        let propagate_req = RuskRequest::new("propagate_tx", tx_bytes);
-        let _ = self.state.call(2, "Chain", &propagate_req).wait()?;
+        let _ = self
+            .state
+            .call("transactions", "", "propagate", &tx_bytes)
+            .wait()?;
         self.status("Transaction propagated!");
 
         let tx_id = BlsScalar::hash_to_scalar(tx.to_hash_input_bytes().as_slice());
         let tx_id_str = hex::encode(tx_id.to_bytes());
         info!("Transaction id = {}", tx_id_str);
-        for _ in 0..20 {
+        for _ in 0..60 {
             let r = BlockchainInquirer::retrieve_tx_err(tx_id_str.clone(), &self.state).wait();
             if r.is_ok() {
                 return match r.unwrap() {
@@ -96,19 +102,23 @@ impl wallet::ProverClient for DCliProverClient {
         let tx_bytes = tx.to_var_bytes();
 
         self.status("Attempt to preverify tx...");
-        let preverify_req = RuskRequest::new("preverify", tx_bytes.clone());
-        let _ = self.state.call(2, "rusk", &preverify_req).wait()?;
+        let _ = self
+            .state
+            .call("transactions", "", "preverify", &tx_bytes)
+            .wait()?;
         self.status("Preverify success!");
 
         self.status("Propagating tx...");
-        let propagate_req = RuskRequest::new("propagate_tx", tx_bytes);
-        let _ = self.state.call(2, "Chain", &propagate_req).wait()?;
+        let _ = self
+            .state
+            .call("transactions", "", "propagate", &tx_bytes)
+            .wait()?;
         self.status("Transaction propagated!");
 
         let tx_id = BlsScalar::hash_to_scalar(tx.to_hash_input_bytes().as_slice());
         let tx_id_str = hex::encode(tx_id.to_bytes());
         info!("Transaction id = {}", tx_id_str);
-        for _ in 0..20 {
+        for _ in 0..180 {
             let r = BlockchainInquirer::retrieve_tx_err(tx_id_str.clone(), &self.state).wait();
             if r.is_ok() {
                 return match r.unwrap() {
@@ -116,7 +126,7 @@ impl wallet::ProverClient for DCliProverClient {
                     None => Ok(tx),
                 };
             }
-            thread::sleep(std::time::Duration::from_secs(3));
+            thread::sleep(std::time::Duration::from_secs(1));
         }
         Err(Error::Propagate("Transaction timed out".into()))
     }

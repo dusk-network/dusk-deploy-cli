@@ -21,6 +21,7 @@ Moonlight example:
 cargo r -- -c ./test/alice.wasm -m "A7gMWt6U6NdMXafvqoMVACdH5hMXubyUhp4MGorNBUv4"
 ```
 
+## Command Line Parameters Summary
 
 ```
 
@@ -62,7 +63,13 @@ ARGUMENTS:
 
 Example configuration file for blockchain connection:
 
+## Configuration File
 ```
+[blockchain_access]
 rusk_address = "http://127.0.0.1:8080"
+#rusk_address = "https://devnet.nodes.dusk.network/"
+#rusk_address = "https://testnet.nodes.dusk.network/"
 prover_address = "http://127.0.0.1:8080"
+#prover_address = "https://devnet.provers.dusk.network/"
+#prover_address = "https://testnet.provers.dusk.network/"
 ```

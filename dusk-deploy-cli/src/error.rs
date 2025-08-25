@@ -19,6 +19,9 @@ pub enum Error {
     /// Propagate
     #[error("{0}")]
     Propagate(Cow<'static, str>),
+    /// Infallible
+    #[error(transparent)]
+    Infallible(std::convert::Infallible),
     /// IO
     #[error(transparent)]
     IO(Arc<std::io::Error>),
@@ -46,6 +49,12 @@ pub enum Error {
     /// Base 58 errors
     #[error(transparent)]
     Base58(Arc<bs58::decode::Error>),
+    /// Argument errors
+    #[error("Argument error {0}")]
+    Argument(Cow<'static, str>),
+    /// Http client errors
+    #[error(transparent)]
+    Config(Arc<toml::de::Error>),
 }
 
 impl From<wallet::Error<DCliStore, DCliStateClient, DCliProverClient>> for Error {
@@ -81,5 +90,17 @@ impl From<rusk_http_client::Error> for Error {
 impl From<bs58::decode::Error> for Error {
     fn from(err: bs58::decode::Error) -> Self {
         Error::Base58(Arc::from(err))
+    }
+}
+
+impl From<std::convert::Infallible> for Error {
+    fn from(err: std::convert::Infallible) -> Self {
+        Self::Infallible(err)
+    }
+}
+
+impl From<toml::de::Error> for Error {
+    fn from(e: toml::de::Error) -> Self {
+        Error::Config(Arc::from(e))
     }
 }

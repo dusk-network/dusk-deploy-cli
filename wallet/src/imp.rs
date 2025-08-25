@@ -12,9 +12,10 @@ use alloc::string::FromUtf8Error;
 use alloc::vec::Vec;
 use std::mem;
 
-use dusk_bytes::{Error as BytesError, Serializable};
-use execution_core::transfer::phoenix::{NoteOpening, Prove, TxCircuitVec};
-use execution_core::{
+use dusk_bytes::Error as BytesError;
+use dusk_core::signatures::bls::Signature;
+use dusk_core::transfer::phoenix::{NoteOpening, Prove, TxCircuitVec};
+use dusk_core::{
     signatures::bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
     transfer::{
         data::{ContractCall, ContractDeploy, TransactionData},
@@ -64,7 +65,7 @@ pub enum Error<S: Store, SC: StateClient, PC: ProverClient> {
     Utf8(FromUtf8Error),
     /// Originating from the transaction model.
     #[error("Transaction model error occurred: {0}")]
-    Phoenix(execution_core::Error),
+    Phoenix(dusk_core::Error),
     /// Originating from Phoenix Core.
     #[error("Phoenix core error occurred: {0}")]
     PhoenixCore(phoenix_core::Error),
@@ -124,8 +125,8 @@ impl<S: Store, SC: StateClient, PC: ProverClient> From<FromUtf8Error> for Error<
     }
 }
 
-impl<S: Store, SC: StateClient, PC: ProverClient> From<execution_core::Error> for Error<S, SC, PC> {
-    fn from(pe: execution_core::Error) -> Self {
+impl<S: Store, SC: StateClient, PC: ProverClient> From<dusk_core::Error> for Error<S, SC, PC> {
+    fn from(pe: dusk_core::Error) -> Self {
         Self::Phoenix(pe)
     }
 }
@@ -169,7 +170,7 @@ impl<S, SC, PC> Wallet<S, SC, PC> {
 struct DummyProver();
 
 impl Prove for DummyProver {
-    fn prove(&self, tx_circuit_vec_bytes: &[u8]) -> Result<Vec<u8>, execution_core::Error> {
+    fn prove(&self, tx_circuit_vec_bytes: &[u8]) -> Result<Vec<u8>, dusk_core::Error> {
         Ok(TxCircuitVec::from_slice(tx_circuit_vec_bytes)
             .expect("serialization should be ok")
             .to_var_bytes()
@@ -197,6 +198,19 @@ where
             .fetch_account_secret_key(index)
             .map(|stake_sk| From::from(&stake_sk))
             .map_err(Error::from_store_err)
+    }
+
+    /// Sign a message
+    pub fn sign(
+        &self,
+        index: u64,
+        message: impl AsRef<[u8]>,
+    ) -> Result<Signature, Error<S, SC, PC>> {
+        let secret_key = self
+            .store
+            .fetch_account_secret_key(index)
+            .map_err(Error::from_store_err)?;
+        Ok(secret_key.sign(message.as_ref()))
     }
 
     /// Fetches the notes and nullifiers in the state and returns the notes that
@@ -360,9 +374,9 @@ where
         let dummy_prover = DummyProver();
         let utx = PhoenixTransaction::new::<Rng, DummyProver>(
             rng,
-            &sender_sk,
+            sender_sk,
             &sender_pk,
-            &receiver_pk,
+            receiver_pk,
             inputs,
             root,
             0,
@@ -452,29 +466,41 @@ where
         sender_index: u64,
         gas_limit: u64,
         gas_price: u64,
+        show_spent: bool,
+        spent_comment: impl AsRef<str>,
+        deposit: u64,
     ) -> Result<Transaction, Error<S, SC, PC>> {
         let moonlight_sk: BlsSecretKey = self
             .store
             .fetch_account_secret_key(sender_index)
             .map_err(Error::from_store_err)?;
+
         let moonlight_pk = BlsPublicKey::from(&moonlight_sk);
         let acc_data = self
             .state
             .fetch_account(&moonlight_pk)
             .map_err(Error::from_state_err)?;
+
         let chain_id = self.state.fetch_chain_id().map_err(Error::from_state_err)?;
 
-        println!(
-            "account {} fetched: {:?}",
-            bs58::encode(moonlight_pk.to_bytes()).into_string(),
-            acc_data
-        );
+        // if show_spent {
+        //     println!(
+        //         "account {} moonlight funds spent: {:?}",
+        //         bs58::encode(moonlight_pk.to_bytes()).into_string(),
+        //         acc_data
+        //     );
+        // }
+        let balance_before = acc_data.balance;
+
+        if balance_before == 0 {
+            println!("account is empty: {}", sender_index);
+        }
 
         let result = self.moonlight_transaction(
             &moonlight_sk,
             None,
             0,
-            0,
+            deposit,
             gas_limit,
             gas_price,
             acc_data.nonce + 1,
@@ -487,11 +513,27 @@ where
             .fetch_account(&moonlight_pk)
             .map_err(Error::from_state_err)?;
 
+        if show_spent {
+            // println!(
+            //     "account {} fetched: {:?}",
+            //     bs58::encode(moonlight_pk.to_bytes()).into_string(),
+            //     acc_data
+            // );
+            let balance_after = acc_data.balance;
+            if balance_before > balance_after {
         println!(
-            "account {} fetched: {:?}",
-            bs58::encode(moonlight_pk.to_bytes()).into_string(),
-            acc_data
+                    "moonlight funds spent on {}: {}",
+                    spent_comment.as_ref(),
+                    balance_before - balance_after
         );
+            } else {
+                println!(
+                    "moonlight funds recovered from {}: {}",
+                    spent_comment.as_ref(),
+                    balance_after - balance_before
+                );
+            }
+        }
 
         result
     }

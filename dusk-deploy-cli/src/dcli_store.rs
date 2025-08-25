@@ -9,7 +9,7 @@ use wallet::Store;
 
 #[derive(Debug, Clone)]
 pub struct DCliStore {
-    pub seed: [u8; 64],
+    seed: [u8; 64],
 }
 
 impl DCliStore {

@@ -6,7 +6,7 @@ description = "Private wallet used for deploy CLI"
 license = "MPL-2.0"
 
 [dependencies]
-phoenix-core = { version = "0.32", default-features = false, features = ["rkyv-impl", "alloc"] }
+phoenix-core = { version = "0.34", default-features = false, features = ["rkyv-impl", "alloc"] }
 rand_core = "^0.6"
 rand_chacha = { version = "^0.3", default-features = false }
 sha2 = { version = "^0.10", default-features = false }
@@ -22,7 +22,7 @@ thiserror = "1.0"
 rand = "^0.8"
 
 # rusk dependencies
-execution-core = { version = "0.1.0", path = "../../../rust/rusk/execution-core" }
+dusk-core = "1.2"
 
 [dev-dependencies]
 rand = "^0.8"

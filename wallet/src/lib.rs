@@ -16,8 +16,8 @@ mod imp;
 
 use alloc::vec::Vec;
 use dusk_bytes::{DeserializableSlice, Serializable, Write};
-use execution_core::transfer::phoenix::NoteOpening;
-use execution_core::{
+use dusk_core::transfer::phoenix::NoteOpening;
+use dusk_core::{
     signatures::bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey},
     transfer::{
         moonlight::{AccountData, Transaction as MoonlightTransaction},
