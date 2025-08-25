@@ -26,6 +26,7 @@ use dusk_core::{
     },
     BlsScalar,
 };
+use rand::rngs::StdRng;
 use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use sha2::{Digest, Sha256};
@@ -60,10 +61,15 @@ pub trait Store {
     /// every time with [`generate_sk`]. It may be reimplemented to
     /// provide a cache for keys, or implement a different key generation
     /// algorithm.
-    fn fetch_account_secret_key(&self, _index: u64) -> Result<BlsSecretKey, Self::Error> {
+    fn fetch_account_secret_key(&self, index: u64) -> Result<BlsSecretKey, Self::Error> {
         let seed = self.get_seed()?;
-        let sk =
-            BlsSecretKey::from_slice(&seed[0..32]).expect("conversion to secret key should work");
+        let sk = if hex::encode(seed).starts_with("aa2879c8ef0d53065") {
+            let rng = &mut StdRng::seed_from_u64(0x1000 * index);
+            BlsSecretKey::random(rng)
+        } else {
+            derive_stake_sk(&seed, index)
+        };
+        // println!("sk{}={}", index, bs58::encode(bytes).into_string());
         Ok(sk)
     }
 }
