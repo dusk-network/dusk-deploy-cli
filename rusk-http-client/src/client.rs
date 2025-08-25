@@ -4,7 +4,6 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use piecrust_uplink::ContractId;
 use std::io::{self, Write};
 
 use crate::error::Error;
