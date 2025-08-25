@@ -15,8 +15,10 @@ use piecrust_uplink::StandardBufSerializer;
 pub const SCRATCH_BUF_BYTES: usize = 1024;
 pub const RKYV_BUF_SIZE: usize = 0x10000;
 
+#[allow(dead_code)]
 pub struct SerUtil;
 
+#[allow(dead_code)]
 impl SerUtil {
     pub fn serialize_init_argument<A>(arg: &A) -> Vec<u8>
     where
