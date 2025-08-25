@@ -49,9 +49,6 @@ pub enum Error {
     /// Base 58 errors
     #[error(transparent)]
     Base58(Arc<bs58::decode::Error>),
-    /// Argument errors
-    #[error("Argument error {0}")]
-    Argument(Cow<'static, str>),
     /// Http client errors
     #[error(transparent)]
     Config(Arc<toml::de::Error>),

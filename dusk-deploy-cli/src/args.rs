@@ -32,10 +32,6 @@ pub struct Args {
     #[clap(short, long, default_value = "")]
     pub contract_path: PathBuf,
 
-    /// Hexadecimal string of contract's owner [default: ``]
-    #[clap(short, long, default_value_t = String::from(""))]
-    pub owner: String,
-    
     /// Index of wallet account to be used as DAC owner [default: `0`]
     #[clap(long, default_value_t = 0)]
     pub wallet_index: u64,

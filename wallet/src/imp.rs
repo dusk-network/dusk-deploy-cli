@@ -521,11 +521,11 @@ where
             // );
             let balance_after = acc_data.balance;
             if balance_before > balance_after {
-        println!(
+                println!(
                     "moonlight funds spent on {}: {}",
                     spent_comment.as_ref(),
                     balance_before - balance_after
-        );
+                );
             } else {
                 println!(
                     "moonlight funds recovered from {}: {}",

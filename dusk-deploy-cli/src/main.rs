@@ -6,30 +6,43 @@
 
 mod args;
 mod block;
+mod bs58_util;
 mod config;
+mod contract_deployer;
+mod contract_types;
 mod dcli_prover_client;
 mod dcli_state_client;
 mod dcli_store;
 mod error;
 mod executor;
 mod gen_id;
+mod seed_util;
+mod ser_util;
 mod wallet_builder;
 
 use crate::args::Args;
 use crate::block::Block;
-use crate::config::BlockchainAccessConfig;
+use crate::bs58_util::Bs58Util;
+use crate::config::DDCliConfig;
+use crate::contract_deployer::ContractDeployer;
+use crate::dcli_prover_client::DCliProverClient;
+use crate::dcli_state_client::DCliStateClient;
+use crate::dcli_store::DCliStore;
 use crate::error::Error;
-use bip39::{Language, Mnemonic, Seed};
+use crate::Error::Deploy;
 use clap::Parser;
-use rusk_http_client::{BlockchainInquirer, RuskHttpClient};
+use dusk_bytes::Serializable;
+use piecrust_uplink::ContractId;
+use rusk_http_client::{BlockchainInquirer, ContractInquirer, RuskHttpClient};
 use std::cmp::min;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
-use toml_base_config::BaseConfig;
 use tracing::info;
+use wallet::Wallet;
 
-use crate::executor::Executor;
 use crate::gen_id::gen_contract_id;
+use crate::seed_util::SeedUtil;
 use crate::wallet_builder::WalletBuilder;
 
 #[tokio::main]
@@ -47,27 +60,26 @@ async fn main() -> Result<(), Error> {
     let gas_limit = cli.gas_limit;
     let gas_price = cli.gas_price;
     let contract_path = cli.contract_path.as_path();
-    let owner = cli.owner;
+    let args = cli.args;
     let wallet_index = cli.wallet_index;
     let nonce = cli.nonce;
-    let args = cli.args;
     let mut start_bh = cli.block_height;
     let rel_bh = cli.relative_height;
     let moonlight_sk_bs58 = cli.moonlight;
     let moonlight: bool = !moonlight_sk_bs58.is_empty();
 
-    let blockchain_access_config = BlockchainAccessConfig::load_path(config_path)?;
+    let config_content = fs::read_to_string(config_path)?;
+    let dd_cli_config = toml::from_str::<DDCliConfig>(config_content.as_str())?;
 
     let mut bytecode_file = File::open(contract_path)?;
     let mut bytecode = Vec::new();
     bytecode_file.read_to_end(&mut bytecode)?;
 
-    let mut constructor_args: Option<Vec<u8>> = None;
+    let mut constructor_args: Vec<u8> = Vec::new();
     if !args.is_empty() {
-        let v = hex::decode(args).expect("decoding constructor arguments should succeed");
-        constructor_args = Some(v);
-    }
-
+        constructor_args =
+            hex::decode(args).expect("decoding constructor arguments should succeed");
+    };
 
     let seed = if moonlight {
         Bs58Util::to_seed(moonlight_sk_bs58)?
@@ -75,44 +87,40 @@ async fn main() -> Result<(), Error> {
         SeedUtil::seed_from_phrase(seed_phrase)?
     };
 
-    let owner = hex::decode(owner).expect("decoding owner should succeed");
-
     if !moonlight && rel_bh != 0 {
-        let client = RuskHttpClient::new(dac_cli_config.blockchain_access.rusk_address.clone());
+        let client = RuskHttpClient::new(dd_cli_config.blockchain_access.rusk_address.clone());
         if let Ok(cur_bh) = BlockchainInquirer::block_height(&client).wait() {
             start_bh = cur_bh - min(cur_bh, rel_bh);
         }
     }
 
+    let client = RuskHttpClient::new(dd_cli_config.blockchain_access.rusk_address.clone());
     let wallet = WalletBuilder::build(
-        dac_cli_config.blockchain_access.rusk_address.clone(),
-        dac_cli_config.blockchain_access.prover_address.clone(),
+        dd_cli_config.blockchain_access.rusk_address.clone(),
+        dd_cli_config.blockchain_access.prover_address.clone(),
         &seed,
         start_bh,
     )?;
+    println!(
+        "wallet2 created, start bh={} seed={}",
+        start_bh,
+        hex::encode(seed)
+    );
 
-    let contract_id = deploy(
+    let owner_pk = wallet.account_public_key(0)?;
+    let owner_bytes = owner_pk.to_bytes().to_vec();
+    let _contract_id = deploy(
         wallet_index,
         &wallet,
         &bytecode,
-        &driver_bytecode,
         &owner_bytes,
         nonce,
-        deploy_gas_limit,
-        deploy_gas_price,
+        gas_limit,
+        gas_price,
         &client,
-        &deploy_data,
+        &constructor_args,
     )
     .wait()?;
-    match result {
-        Ok(_) => info!("Deployment successful"),
-        Err(ref err) => info!("{} when deploying {:?}", err, contract_path),
-    }
-
-    if result.is_ok() {
-        let deployed_id = gen_contract_id(bytecode, nonce, owner);
-        info!("Deployed contract id: {}", hex::encode(deployed_id));
-    }
 
     Ok(())
 }
@@ -121,15 +129,14 @@ async fn deploy(
     wallet_index: u64,
     wallet: &Wallet<DCliStore, DCliStateClient, DCliProverClient>,
     bytecode: &[u8],
-    driver_bytecode: &[u8],
     owner: &[u8],
     nonce: u64,
     gas_limit: u64,
     gas_price: u64,
     client: &RuskHttpClient,
-    deploy_data: &DacDeployData,
+    deploy_data: &[u8],
 ) -> Result<ContractId, Error> {
-    let contract_id = DacDeployer::get_contract_id(&bytecode, nonce, owner);
+    let contract_id = ContractDeployer::get_contract_id(&bytecode, nonce, owner);
 
     let r = ContractInquirer::query_contract::<Vec<u8>, u64>(
         &client,
@@ -150,7 +157,7 @@ async fn deploy(
 
     if !already_exists {
         info!("Deploying with nonce {}", nonce as u64);
-        let result = DacDeployer::deploy(
+        let result = ContractDeployer::deploy(
             &wallet,
             &bytecode,
             &owner,

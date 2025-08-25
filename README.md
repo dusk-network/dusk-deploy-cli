@@ -33,7 +33,6 @@ ARGUMENTS:
                             if omitted, a 500_000_000 default will be used
         --gas-price         Gas price to be used when executing the deployment transaction,
                             if omitted, price value 1 will be used
-    -o, --owner             Hexadecimal string representing the owner of the contract
     -n, --nonce             Number used when calculating contract is, used when there is a need to deploy
                             multiple contracts with the same bytecode and owner, and/or to obtain
                             a vanity contract did,
