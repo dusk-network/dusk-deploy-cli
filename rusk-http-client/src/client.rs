@@ -4,6 +4,7 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
+use piecrust_uplink::ContractId;
 use std::io::{self, Write};
 
 use crate::error::Error;
@@ -158,5 +159,94 @@ impl RuskHttpClient {
         } else {
             Ok(response)
         }
+    }
+
+    /// Upload the data driver
+    pub async fn upload_driver(
+        &self,
+        driver_bytecode: impl AsRef<[u8]>,
+        contract_id: &ContractId,
+        hash: impl AsRef<[u8]>,
+        signature: impl AsRef<[u8]>,
+    ) -> Result<Vec<u8>, Error> {
+        let uri = &self.uri;
+        let client = reqwest::Client::new();
+        let target = "upload_driver";
+        let entity = hex::encode(contract_id.as_bytes());
+        let entity = if entity.is_empty() {
+            entity.to_string()
+        } else {
+            format!(":{}", entity)
+        };
+        let topic = "aa/bb";
+        let rues_prefix = if uri.ends_with('/') { "on" } else { "/on" };
+        let request = client
+            .post(format!("{uri}{rues_prefix}/{target}{entity}/{topic}"))
+            .body(Body::from(driver_bytecode.as_ref().to_vec()))
+            .header("Content-Type", "application/octet-stream")
+            .header("rusk-version", REQUIRED_RUSK_VERSION)
+            .header("hash", hex::encode(hash.as_ref()))
+            .header("sign", hex::encode(signature.as_ref()));
+
+        println!("request={:?}", request);
+
+        let response = request.send().await?;
+
+        let status = response.status();
+        if status.is_client_error() || status.is_server_error() {
+            let error = &response.bytes().await?;
+
+            let error = String::from_utf8(error.to_vec()).unwrap_or("unparsable error".into());
+
+            let msg = format!("{status}: {error}");
+
+            Err(Error::Rusk(msg))
+        } else {
+            let data = response.bytes().await?;
+            Ok(data.to_vec())
+        }
+    }
+
+    /// Call data driver
+    pub async fn call_driver(
+        &self,
+        contract_id: &ContractId,
+        driver_method: impl AsRef<str>,
+        contract_method: impl AsRef<str>,
+        data: impl AsRef<[u8]>,
+    ) -> Result<Vec<u8>, Error> {
+        let uri = &self.uri;
+        let client = reqwest::Client::new();
+        let target = "driver";
+        let entity = hex::encode(contract_id.as_bytes());
+        let entity = if entity.is_empty() {
+            entity.to_string()
+        } else {
+            format!(":{}", entity)
+        };
+        // "encode_input_fn:get_version"
+        let (driver_method, contract_method) = (driver_method.as_ref(), contract_method.as_ref());
+        let topic = format!("{driver_method}:{contract_method}");
+        let rues_prefix = if uri.ends_with('/') { "on" } else { "/on" };
+        let data = data.as_ref().to_vec();
+        let data_len = data.len();
+        let request_builder = client
+            .post(format!("{uri}{rues_prefix}/{target}{entity}/{topic}"))
+            .body(Body::from(data))
+            .header("Content-Type", "application/octet-stream")
+            .header("Content-Length", data_len)
+            .header("rusk-version", REQUIRED_RUSK_VERSION);
+        let request = request_builder.build()?;
+
+        println!("request={:?}", request);
+        println!("request body={:x?}", request.body().unwrap().as_bytes());
+
+        // let response = request.send().await?;
+        let response = client.execute(request).await?;
+
+        println!("response={:?}", response);
+        let r = response.bytes().await?;
+        println!("response bytes={:?}", r);
+        Ok(r.to_vec())
     }
 }
